@@ -122,7 +122,7 @@ function calcHorizontalTrimPieces(totalRunInches, stickLenIn) {
    PRINT HTML
 ========================= */
 
-function buildPrintHtml({ company, customer, job, rows, total }) {
+function buildPrintHtml({ logoUrl, company, customer, job, rows, total }) {
   const safe = (s) =>
     String(s ?? "")
       .replaceAll("&", "&amp;")
@@ -153,27 +153,84 @@ function buildPrintHtml({ company, customer, job, rows, total }) {
   <meta charset="utf-8" />
   <title>Estimate</title>
   <style>
-    :root { --border:#e6e6ee; --muted:#666; }
-    body { font-family: "Segoe UI", Arial, sans-serif; margin: 0; color:#111; }
-    .page { padding: 28px; max-width: 920px; margin: 0 auto; }
-    .hdr { display:flex; justify-content:space-between; gap: 16px; align-items:flex-start; }
-    .brand h1 { margin:0; font-size: 20px; }
-    .brand .muted { color:var(--muted); font-size: 12px; margin-top: 6px; line-height: 1.35; }
+    :root{
+      --navy:#0b2a4a;
+      --red:#c1121f;
+      --bg:#f6f8fc;
+      --card:#ffffff;
+      --border:#e4e8f2;
+      --muted:#5b6472;
+    }
+    body { font-family: "Segoe UI", Arial, sans-serif; margin:0; color:#111; background: var(--bg); }
+    .page { padding: 28px; max-width: 980px; margin: 0 auto; }
+    .topbar{
+      background: var(--card);
+      border:1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px 16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 16px;
+      box-shadow: 0 10px 26px rgba(11,42,74,.06);
+    }
+    .brandWrap{ display:flex; align-items:center; gap: 14px; }
+    .logo{ width: 86px; height:auto; display:block; }
+    .brand h1 { margin:0; font-size: 18px; color: var(--navy); letter-spacing: .2px; }
+    .brand .muted { color:var(--muted); font-size: 12px; margin-top: 4px; line-height: 1.35; }
     .meta { text-align:right; font-size: 12px; color:var(--muted); line-height: 1.35; }
-    .card { border:1px solid var(--border); border-radius: 14px; padding: 14px; margin-top: 14px; }
+    .pill{
+      display:inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--navy);
+      font-weight: 800;
+      margin-top: 6px;
+    }
+    .accentBar{
+      height: 6px;
+      border-radius: 999px;
+      margin-top: 10px;
+      background: linear-gradient(90deg, var(--navy), #ffffff 45%, var(--red));
+      border: 1px solid var(--border);
+    }
+
+    .card { background: var(--card); border:1px solid var(--border); border-radius: 18px; padding: 14px; margin-top: 14px; }
     .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .label { color:var(--muted); font-size: 12px; font-weight:700; }
+    .label { color:var(--muted); font-size: 12px; font-weight:900; }
     .value { font-size: 13px; margin-top: 3px; line-height: 1.35; }
+
     table { width:100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
-    th, td { border-bottom:1px solid var(--border); padding: 9px; vertical-align: top; }
-    th { background:#f7f7fb; text-align:left; font-size: 12px; }
+    th, td { border-bottom:1px solid var(--border); padding: 10px; vertical-align: top; }
+    th {
+      background: #eef3ff;
+      text-align:left;
+      font-size: 12px;
+      color: var(--navy);
+      border-bottom: 2px solid rgba(11,42,74,.10);
+    }
     td.num, th.num { text-align:right; white-space:nowrap; }
     td.item { width: 52%; }
+
     .totals { display:flex; justify-content:flex-end; margin-top: 10px; }
-    .totals .box { width: 320px; border:1px solid var(--border); border-radius: 14px; padding: 12px; }
+    .totals .box { width: 320px; border:1px solid var(--border); border-radius: 18px; padding: 12px; background:#fff; }
     .totals .row { display:flex; justify-content:space-between; margin: 6px 0; }
-    .totals .row.total { font-weight: 900; font-size: 14px; }
-    .footer { margin-top: 14px; font-size: 11px; color:var(--muted); line-height: 1.35; }
+    .totals .row.total { font-weight: 950; font-size: 14px; color: var(--navy); }
+    .footer { margin-top: 12px; font-size: 11px; color:var(--muted); line-height: 1.35; }
+
+    .btn{
+      padding:10px 14px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background:#fff;
+      cursor:pointer;
+      font-weight:900;
+      color: var(--navy);
+    }
+    .btn:hover{ border-color: rgba(11,42,74,.25); }
+
     @media print {
       .no-print { display:none !important; }
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -183,12 +240,20 @@ function buildPrintHtml({ company, customer, job, rows, total }) {
 </head>
 <body>
   <div class="page">
-    <div class="hdr">
-      <div class="brand">
-        <h1>${safe(company.name || "Your Company")} | Shower Estimate</h1>
-        <div class="muted">
-          ${safe(company.phone || "")}${company.phone && company.email ? " • " : ""}${safe(company.email || "")}
-          ${company.address ? "<br/>" + safe(company.address) : ""}
+    <div class="topbar">
+      <div class="brandWrap">
+        ${
+          logoUrl
+            ? `<img class="logo" src="${safe(logoUrl)}" alt="Logo" onerror="this.style.display='none'"/>`
+            : ""
+        }
+        <div class="brand">
+          <h1>${safe(company.name || "Your Company")} | Shower Estimate</h1>
+          <div class="muted">
+            ${safe(company.phone || "")}${company.phone && company.email ? " • " : ""}${safe(company.email || "")}
+            ${company.address ? "<br/>" + safe(company.address) : ""}
+          </div>
+          <div class="pill">Red • White • Blue Estimate</div>
         </div>
       </div>
       <div class="meta">
@@ -196,6 +261,8 @@ function buildPrintHtml({ company, customer, job, rows, total }) {
         <div><b>Estimate #:</b> ${safe(job.estimateNumber || "—")}</div>
       </div>
     </div>
+
+    <div class="accentBar"></div>
 
     <div class="card grid">
       <div>
@@ -234,9 +301,7 @@ function buildPrintHtml({ company, customer, job, rows, total }) {
             <th class="num">Ext $</th>
           </tr>
         </thead>
-        <tbody>
-          ${tbody}
-        </tbody>
+        <tbody>${tbody}</tbody>
       </table>
 
       <div class="totals">
@@ -252,9 +317,7 @@ function buildPrintHtml({ company, customer, job, rows, total }) {
     </div>
 
     <div class="no-print" style="margin-top:14px; text-align:right;">
-      <button onclick="window.print()" style="padding:10px 14px; border-radius:12px; border:1px solid #ccc; background:#fff; cursor:pointer;">
-        Print / Save as PDF
-      </button>
+      <button class="btn" onclick="window.print()">Print / Save as PDF</button>
     </div>
   </div>
 </body>
@@ -262,40 +325,14 @@ function buildPrintHtml({ company, customer, job, rows, total }) {
 }
 
 /* =========================
-   UI: Vercel-safe checkbox row
-   (prevents label text being hidden by global CSS)
-========================= */
-function CheckRow({ checked, onChange, children, disabled = false }) {
-  return (
-    <label
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        marginBottom: 6,
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.65 : 1,
-        userSelect: "none",
-      }}
-    >
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        disabled={disabled}
-      />
-      <span style={{ color: "#111", fontSize: 14, fontWeight: 600, lineHeight: 1.2 }}>
-        {children}
-      </span>
-    </label>
-  );
-}
-
-/* =========================
    APP
 ========================= */
 
 export default function App() {
+  // ✅ Google Drive direct image URL (reliable for <img>)
+  const LOGO_URL = "https://drive.google.com/uc?export=view&id=1MR7bEKHTAz1YTvMif_XvjsBxJIx-Z_eD";
+  const [logoOk, setLogoOk] = useState(true);
+
   // Dimensions (defaults you requested)
   const [wall1, setWall1] = useState(32);
   const [wall2, setWall2] = useState(60);
@@ -343,8 +380,8 @@ export default function App() {
   // View: Summary vs Detailed (DISPLAY ONLY)
   const [detailLevel, setDetailLevel] = useState("summary"); // "summary" | "detailed"
 
-  // Customer / Company / Notes
-  const [company, setCompany] = useState({
+  // Company / Customer / Notes
+  const [company] = useState({
     name: "HiTecHandyman Services",
     phone: "",
     email: "",
@@ -580,6 +617,7 @@ export default function App() {
 
   const printEstimate = () => {
     const html = buildPrintHtml({
+      logoUrl: LOGO_URL,
       company,
       customer,
       job: {
@@ -601,123 +639,204 @@ export default function App() {
     w.document.close();
   };
 
-  const uiCard = {
-    border: "1px solid #ddd",
-    borderRadius: 14,
-    padding: 16,
-    background: "white",
-  };
-
   // ✅ CENTS-FORMAT HELPER FOR ALL PRICE INPUTS
   const priceStr = (k) => {
     const v = Number(prices[k]);
     return Number.isFinite(v) ? v.toFixed(2) : "0.00";
   };
 
+  const globalCss = `
+    :root{
+      --navy:#0b2a4a;
+      --red:#c1121f;
+      --bg:#f6f8fc;
+      --card:#ffffff;
+      --border:#e4e8f2;
+      --muted:#5b6472;
+      --shadow: 0 10px 26px rgba(11,42,74,.06);
+    }
+    body{ margin:0; background: var(--bg); color:#111; }
+    input, select, textarea{
+      border:1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 10px;
+      font-family: "Segoe UI", Arial, sans-serif;
+      outline: none;
+      background: #fff;
+      color:#111;
+    }
+    input:focus, select:focus, textarea:focus{
+      border-color: rgba(11,42,74,.35);
+      box-shadow: 0 0 0 3px rgba(11,42,74,.10);
+    }
+    hr{ border:none; border-top:1px solid var(--border); margin: 14px 0; }
+    .btn{
+      width:100%;
+      padding: 12px 12px;
+      border-radius: 14px;
+      border:1px solid var(--border);
+      background:#fff;
+      cursor:pointer;
+      font-weight: 900;
+      color: var(--navy);
+    }
+    .btn:hover{ border-color: rgba(11,42,74,.25); }
+    .checkboxRow{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      margin-bottom: 8px;
+      color:#111;
+      font-weight: 700;
+      font-size: 13px;
+      user-select:none;
+    }
+    .checkboxRow input{ width: 16px; height: 16px; }
+  `;
+
+  const uiCard = {
+    border: "1px solid var(--border)",
+    borderRadius: 18,
+    padding: 16,
+    background: "var(--card)",
+    boxShadow: "var(--shadow)",
+  };
+
+  const smallLabel = { fontWeight: 800, fontSize: 12, color: "var(--muted)" };
+
   return (
     <div style={{ padding: 24, fontFamily: "Segoe UI, Arial" }}>
-      <h1 style={{ marginTop: 0 }}>Shower Estimator</h1>
+      <style>{globalCss}</style>
+
+      {/* Header with logo + title */}
+      <div
+        style={{
+          ...uiCard,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 16,
+          padding: 14,
+          marginBottom: 16,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          {logoOk ? (
+            <img
+              src={LOGO_URL}
+              alt="Shower Estimator Logo"
+              style={{ width: 88, height: "auto" }}
+              onError={() => setLogoOk(false)}
+            />
+          ) : (
+            <div style={{ width: 88, fontWeight: 950, color: "var(--navy)", fontSize: 12, lineHeight: 1.1 }}>
+              LOGO
+            </div>
+          )}
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 950, color: "var(--navy)", letterSpacing: 0.2 }}>
+              Shower Estimator
+            </div>
+            <div style={{ fontSize: 12, color: "var(--muted)", fontWeight: 700 }}>
+              Red • White • Blue worksheet and printout theme
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            height: 8,
+            width: 220,
+            borderRadius: 999,
+            border: "1px solid var(--border)",
+            background: "linear-gradient(90deg, var(--navy), #ffffff 45%, var(--red))",
+          }}
+        />
+      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "540px 1fr", gap: 16 }}>
         {/* LEFT: Inputs */}
         <div style={uiCard}>
-          <h3 style={{ marginTop: 0 }}>Customer / Proposal</h3>
+          <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Customer / Proposal</h3>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 12, color: "#666" }}>Customer Name</div>
-              <input
-                value={customer.name}
-                onChange={(e) => setCustomer((c) => ({ ...c, name: e.target.value }))}
-                style={{ width: "100%" }}
-              />
+              <div style={smallLabel}>Customer Name</div>
+              <input value={customer.name} onChange={(e) => setCustomer((c) => ({ ...c, name: e.target.value }))} style={{ width: "100%" }} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 12, color: "#666" }}>Customer Phone</div>
-              <input
-                value={customer.phone}
-                onChange={(e) => setCustomer((c) => ({ ...c, phone: e.target.value }))}
-                style={{ width: "100%" }}
-              />
+              <div style={smallLabel}>Customer Phone</div>
+              <input value={customer.phone} onChange={(e) => setCustomer((c) => ({ ...c, phone: e.target.value }))} style={{ width: "100%" }} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 12, color: "#666" }}>Customer Email</div>
-              <input
-                value={customer.email}
-                onChange={(e) => setCustomer((c) => ({ ...c, email: e.target.value }))}
-                style={{ width: "100%" }}
-              />
+              <div style={smallLabel}>Customer Email</div>
+              <input value={customer.email} onChange={(e) => setCustomer((c) => ({ ...c, email: e.target.value }))} style={{ width: "100%" }} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 12, color: "#666" }}>Job Address</div>
-              <input
-                value={customer.address}
-                onChange={(e) => setCustomer((c) => ({ ...c, address: e.target.value }))}
-                style={{ width: "100%" }}
-              />
+              <div style={smallLabel}>Job Address</div>
+              <input value={customer.address} onChange={(e) => setCustomer((c) => ({ ...c, address: e.target.value }))} style={{ width: "100%" }} />
             </div>
           </div>
 
           <div style={{ marginTop: 10 }}>
-            <div style={{ fontWeight: 700, fontSize: 12, color: "#666" }}>Scope / Notes</div>
+            <div style={smallLabel}>Scope / Notes</div>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} style={{ width: "100%" }} />
           </div>
 
           <hr />
 
-          <h3 style={{ marginTop: 0 }}>Estimate View</h3>
+          <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Estimate View</h3>
           <div style={{ marginBottom: 10 }}>
-            <div style={{ fontWeight: 700, fontSize: 12, color: "#666" }}>Detail Level (display only)</div>
+            <div style={smallLabel}>Detail Level (display only)</div>
             <select value={detailLevel} onChange={(e) => setDetailLevel(e.target.value)} style={{ width: "100%" }}>
               <option value="summary">Summary (customer-facing)</option>
               <option value="detailed">Detailed (contractor takeoff)</option>
             </select>
-            <div style={{ fontSize: 12, color: "#555", marginTop: 6 }}>
+            <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6, fontWeight: 700 }}>
               Total is always based on the full takeoff, so Summary and Detailed match.
             </div>
           </div>
 
           <hr />
 
-          <h3 style={{ marginTop: 0 }}>Dimensions</h3>
+          <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Dimensions</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
-              <label style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Wall 1 (in)</label>
+              <div style={smallLabel}>Wall 1 (in)</div>
               <input type="number" value={wall1} onChange={(e) => setWall1(Number(e.target.value))} style={{ width: "100%" }} />
             </div>
             <div>
-              <label style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Back wall (in)</label>
+              <div style={smallLabel}>Back wall (in)</div>
               <input type="number" value={wall2} onChange={(e) => setWall2(Number(e.target.value))} style={{ width: "100%" }} />
             </div>
             <div>
-              <label style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Wall 3 (in)</label>
+              <div style={smallLabel}>Wall 3 (in)</div>
               <input type="number" value={wall3} onChange={(e) => setWall3(Number(e.target.value))} style={{ width: "100%" }} />
             </div>
             <div>
-              <label style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Height (in)</label>
+              <div style={smallLabel}>Height (in)</div>
               <input type="number" value={height} onChange={(e) => setHeight(Number(e.target.value))} style={{ width: "100%" }} />
             </div>
           </div>
 
           <hr />
 
-          <h3 style={{ marginTop: 0 }}>System</h3>
+          <h3 style={{ marginTop: 0, color: "var(--navy)" }}>System</h3>
 
           <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Material</label>
+            <div style={smallLabel}>Material</div>
             <select value={material} onChange={(e) => setMaterial(e.target.value)} style={{ width: "100%" }}>
               <option value="pvc">PVC Panels</option>
               <option value="acrylic">Acrylic Panels</option>
               <option value="solid">Solid Surface</option>
             </select>
-            <div style={{ fontSize: 12, color: "#555", marginTop: 6 }}>
-              Waste: {(rule.waste * 100).toFixed(0)}% • Adhesive: {rule.adhesiveSqftPerTube} sf/tube • Silicone:{" "}
-              {rule.siliconeLfPerTube} lf/tube
+            <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6, fontWeight: 700 }}>
+              Waste: {(rule.waste * 100).toFixed(0)}% • Adhesive: {rule.adhesiveSqftPerTube} sf/tube • Silicone: {rule.siliconeLfPerTube} lf/tube
             </div>
           </div>
 
           <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Panel Size</label>
+            <div style={smallLabel}>Panel Size</div>
             <select value={panelKey} onChange={(e) => setPanelKey(e.target.value)} style={{ width: "100%" }}>
               {PANEL_SIZES.map((p) => (
                 <option key={p.key} value={p.key}>
@@ -728,7 +847,7 @@ export default function App() {
           </div>
 
           <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Trim Stick Length</label>
+            <div style={smallLabel}>Trim Stick Length</div>
             <select value={trimLenKey} onChange={(e) => setTrimLenKey(e.target.value)} style={{ width: "100%" }}>
               {TRIM_LENGTHS.map((t) => (
                 <option key={t.key} value={t.key}>
@@ -740,9 +859,9 @@ export default function App() {
 
           <hr />
 
-          <h3 style={{ marginTop: 0 }}>Backer / Substrate</h3>
+          <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Backer / Substrate</h3>
           <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Backer Type</label>
+            <div style={smallLabel}>Backer Type</div>
             <select value={backerType} onChange={(e) => setBackerType(e.target.value)} style={{ width: "100%" }}>
               {BACKER_TYPES.map((b) => (
                 <option key={b.key} value={b.key}>
@@ -753,13 +872,8 @@ export default function App() {
           </div>
 
           <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Sheet Size</label>
-            <select
-              value={sheetKey}
-              onChange={(e) => setSheetKey(e.target.value)}
-              style={{ width: "100%" }}
-              disabled={!backer.requiresSheets}
-            >
+            <div style={smallLabel}>Sheet Size</div>
+            <select value={sheetKey} onChange={(e) => setSheetKey(e.target.value)} style={{ width: "100%" }} disabled={!backer.requiresSheets}>
               {SHEET_SIZES.map((s) => (
                 <option key={s.key} value={s.key}>
                   {s.label}
@@ -768,87 +882,72 @@ export default function App() {
             </select>
           </div>
 
-          <CheckRow checked={includeBacker} onChange={setIncludeBacker}>
-            Include backer sheets
-          </CheckRow>
-          <CheckRow checked={includeBackerScrews} onChange={setIncludeBackerScrews}>
-            Include backer screws
-          </CheckRow>
-          <CheckRow checked={includeBackerTape} onChange={setIncludeBackerTape}>
-            Include mesh tape
-          </CheckRow>
+          <label className="checkboxRow">
+            <input type="checkbox" checked={includeBacker} onChange={(e) => setIncludeBacker(e.target.checked)} />
+            <span>Include backer sheets</span>
+          </label>
+          <label className="checkboxRow">
+            <input type="checkbox" checked={includeBackerScrews} onChange={(e) => setIncludeBackerScrews(e.target.checked)} />
+            <span>Include backer screws</span>
+          </label>
+          <label className="checkboxRow">
+            <input type="checkbox" checked={includeBackerTape} onChange={(e) => setIncludeBackerTape(e.target.checked)} />
+            <span>Include mesh tape</span>
+          </label>
 
           <hr />
 
-          <h3 style={{ marginTop: 0 }}>Waterproofing</h3>
-          <CheckRow checked={includeWaterproofing} onChange={setIncludeWaterproofing}>
-            Include waterproofing
-          </CheckRow>
+          <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Waterproofing</h3>
+          <label className="checkboxRow">
+            <input type="checkbox" checked={includeWaterproofing} onChange={(e) => setIncludeWaterproofing(e.target.checked)} />
+            <span>Include waterproofing</span>
+          </label>
 
           <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>System</label>
-            <select
-              value={wpSystem}
-              onChange={(e) => setWpSystem(e.target.value)}
-              style={{ width: "100%" }}
-              disabled={!includeWaterproofing}
-            >
+            <div style={smallLabel}>System</div>
+            <select value={wpSystem} onChange={(e) => setWpSystem(e.target.value)} style={{ width: "100%" }} disabled={!includeWaterproofing}>
               {WATERPROOF_SYSTEMS.map((w) => (
                 <option key={w.key} value={w.key}>
                   {w.label}
                 </option>
               ))}
             </select>
-            <div style={{ fontSize: 12, color: "#555", marginTop: 6 }}>
+            <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6, fontWeight: 700 }}>
               WP enabled: {model.wpEnabled ? "Yes" : "No"} (requires sheet-based backer)
             </div>
           </div>
 
           {includeWaterproofing && wpSystem === "liquid" && (
-            <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 10, marginBottom: 10 }}>
-              <div style={{ fontWeight: 800, marginBottom: 6 }}>Liquid Settings</div>
+            <div style={{ border: "1px solid var(--border)", borderRadius: 14, padding: 10, marginBottom: 10, background: "#fff" }}>
+              <div style={{ fontWeight: 950, marginBottom: 6, color: "var(--navy)" }}>Liquid Settings</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
-                  <div style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Coats</div>
+                  <div style={smallLabel}>Coats</div>
                   <input type="number" min="1" value={liqCoats} onChange={(e) => setLiqCoats(Number(e.target.value))} style={{ width: "100%" }} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Coverage (sf/gal/coat)</div>
-                  <input
-                    type="number"
-                    min="1"
-                    value={liqCoveragePerGallon}
-                    onChange={(e) => setLiqCoveragePerGallon(Number(e.target.value))}
-                    style={{ width: "100%" }}
-                  />
+                  <div style={smallLabel}>Coverage (sf/gal/coat)</div>
+                  <input type="number" min="1" value={liqCoveragePerGallon} onChange={(e) => setLiqCoveragePerGallon(Number(e.target.value))} style={{ width: "100%" }} />
                 </div>
               </div>
-              <div style={{ fontSize: 12, color: "#555", marginTop: 6 }}>
+              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6, fontWeight: 700 }}>
                 Est: {model.liquidGallons} gallon(s), fabric rolls: {model.liquidFabricRolls}
               </div>
             </div>
           )}
 
           {includeWaterproofing && wpSystem === "sheet" && (
-            <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 10, marginBottom: 10 }}>
-              <div style={{ fontWeight: 800, marginBottom: 6 }}>Sheet Settings</div>
-
-              <CheckRow checked={includeBanding} onChange={setIncludeBanding}>
-                Include banding
-              </CheckRow>
-
+            <div style={{ border: "1px solid var(--border)", borderRadius: 14, padding: 10, marginBottom: 10, background: "#fff" }}>
+              <div style={{ fontWeight: 950, marginBottom: 6, color: "var(--navy)" }}>Sheet Settings</div>
+              <label className="checkboxRow">
+                <input type="checkbox" checked={includeBanding} onChange={(e) => setIncludeBanding(e.target.checked)} />
+                <span>Include banding</span>
+              </label>
               <div>
-                <div style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Banding Waste (fraction)</div>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={bandingWaste}
-                  onChange={(e) => setBandingWaste(Number(e.target.value))}
-                  style={{ width: "100%" }}
-                />
+                <div style={smallLabel}>Banding Waste (fraction)</div>
+                <input type="number" step="0.01" min="0" value={bandingWaste} onChange={(e) => setBandingWaste(Number(e.target.value))} style={{ width: "100%" }} />
               </div>
-              <div style={{ fontSize: 12, color: "#555", marginTop: 6 }}>
+              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6, fontWeight: 700 }}>
                 Est: membrane {model.sheetMembraneSqft} sf, banding {model.bandLf} lf, corners {model.preformedCorners}
               </div>
             </div>
@@ -856,99 +955,95 @@ export default function App() {
 
           <hr />
 
-          <h3 style={{ marginTop: 0 }}>Install Options</h3>
-          <CheckRow checked={includeAdhesive} onChange={setIncludeAdhesive}>
-            Include adhesive
-          </CheckRow>
-          <CheckRow checked={includeSilicone} onChange={setIncludeSilicone}>
-            Include silicone
-          </CheckRow>
-          <CheckRow checked={seamsUseTrim} onChange={setSeamsUseTrim}>
-            Seams use H-joint trim (not sealant)
-          </CheckRow>
+          <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Install Options</h3>
+          <label className="checkboxRow">
+            <input type="checkbox" checked={includeAdhesive} onChange={(e) => setIncludeAdhesive(e.target.checked)} />
+            <span>Include adhesive</span>
+          </label>
+          <label className="checkboxRow">
+            <input type="checkbox" checked={includeSilicone} onChange={(e) => setIncludeSilicone(e.target.checked)} />
+            <span>Include silicone</span>
+          </label>
+          <label className="checkboxRow">
+            <input type="checkbox" checked={seamsUseTrim} onChange={(e) => setSeamsUseTrim(e.target.checked)} />
+            <span>Seams use H-joint trim (not sealant)</span>
+          </label>
 
-          <CheckRow checked={includeInsideCornerTrim} onChange={setIncludeInsideCornerTrim}>
-            Inside corner trim
-          </CheckRow>
-          <CheckRow checked={includeEdgeTrim} onChange={setIncludeEdgeTrim}>
-            Edge/J-trim
-          </CheckRow>
-          <CheckRow checked={includeTopTrim} onChange={setIncludeTopTrim}>
-            Top trim
-          </CheckRow>
-          <CheckRow checked={includeBottomTrim} onChange={setIncludeBottomTrim}>
-            Bottom trim
-          </CheckRow>
+          <label className="checkboxRow">
+            <input type="checkbox" checked={includeInsideCornerTrim} onChange={(e) => setIncludeInsideCornerTrim(e.target.checked)} />
+            <span>Inside corner trim</span>
+          </label>
+          <label className="checkboxRow">
+            <input type="checkbox" checked={includeEdgeTrim} onChange={(e) => setIncludeEdgeTrim(e.target.checked)} />
+            <span>Edge/J-trim</span>
+          </label>
+          <label className="checkboxRow">
+            <input type="checkbox" checked={includeTopTrim} onChange={(e) => setIncludeTopTrim(e.target.checked)} />
+            <span>Top trim</span>
+          </label>
+          <label className="checkboxRow">
+            <input type="checkbox" checked={includeBottomTrim} onChange={(e) => setIncludeBottomTrim(e.target.checked)} />
+            <span>Bottom trim</span>
+          </label>
 
           <hr />
 
-          <h3 style={{ marginTop: 0 }}>Pricing</h3>
-          <CheckRow checked={includePanelPrice} onChange={setIncludePanelPrice}>
-            Include panel price in total
-          </CheckRow>
+          <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Pricing</h3>
+          <label className="checkboxRow">
+            <input type="checkbox" checked={includePanelPrice} onChange={(e) => setIncludePanelPrice(e.target.checked)} />
+            <span>Include panel price in total</span>
+          </label>
 
-          <button
-            onClick={printEstimate}
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              borderRadius: 12,
-              border: "1px solid #ccc",
-              background: "white",
-              cursor: "pointer",
-              fontWeight: 900,
-            }}
-          >
+          <button onClick={printEstimate} className="btn">
             Print / Save as PDF
           </button>
         </div>
 
         {/* RIGHT: Estimate */}
         <div style={uiCard}>
-          <h3 style={{ marginTop: 0 }}>Estimate</h3>
+          <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Estimate</h3>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-            <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 12 }}>
-              <div style={{ color: "#666", fontSize: 12, fontWeight: 800 }}>Area (w/ waste)</div>
-              <div style={{ fontSize: 18, fontWeight: 900 }}>{model.totalSqft.toFixed(2)} sf</div>
+            <div style={{ border: "1px solid var(--border)", borderRadius: 14, padding: 12, background: "#fff" }}>
+              <div style={{ color: "var(--muted)", fontSize: 12, fontWeight: 900 }}>Area (w/ waste)</div>
+              <div style={{ fontSize: 18, fontWeight: 950, color: "var(--navy)" }}>{model.totalSqft.toFixed(2)} sf</div>
             </div>
-            <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 12 }}>
-              <div style={{ color: "#666", fontSize: 12, fontWeight: 800 }}>Panels</div>
-              <div style={{ fontSize: 18, fontWeight: 900 }}>{model.panelsNeeded}</div>
+            <div style={{ border: "1px solid var(--border)", borderRadius: 14, padding: 12, background: "#fff" }}>
+              <div style={{ color: "var(--muted)", fontSize: 12, fontWeight: 900 }}>Panels</div>
+              <div style={{ fontSize: 18, fontWeight: 950, color: "var(--navy)" }}>{model.panelsNeeded}</div>
             </div>
-            <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 12 }}>
-              <div style={{ color: "#666", fontSize: 12, fontWeight: 800 }}>View</div>
-              <div style={{ fontSize: 14, fontWeight: 900 }}>{detailLevel === "summary" ? "Summary" : "Detailed"}</div>
-              <div style={{ fontSize: 12, color: "#666" }}>Total always uses full takeoff</div>
+            <div style={{ border: "1px solid var(--border)", borderRadius: 14, padding: 12, background: "#fff" }}>
+              <div style={{ color: "var(--muted)", fontSize: 12, fontWeight: 900 }}>View</div>
+              <div style={{ fontSize: 14, fontWeight: 950, color: "var(--navy)" }}>{detailLevel === "summary" ? "Summary" : "Detailed"}</div>
+              <div style={{ fontSize: 12, color: "var(--muted)", fontWeight: 700 }}>Total always uses full takeoff</div>
             </div>
-            <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 12 }}>
-              <div style={{ color: "#666", fontSize: 12, fontWeight: 800 }}>Total</div>
-              <div style={{ fontSize: 18, fontWeight: 900 }}>{money(masterTotal)}</div>
+            <div style={{ border: "1px solid var(--border)", borderRadius: 14, padding: 12, background: "#fff" }}>
+              <div style={{ color: "var(--muted)", fontSize: 12, fontWeight: 900 }}>Total</div>
+              <div style={{ fontSize: 18, fontWeight: 950, color: "var(--navy)" }}>{money(masterTotal)}</div>
             </div>
           </div>
 
-          <div style={{ marginTop: 14, border: "1px solid #eee", borderRadius: 12, overflow: "hidden" }}>
+          <div style={{ marginTop: 14, border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden", background: "#fff" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
-                <tr style={{ background: "#f7f7fb" }}>
-                  <th style={{ textAlign: "left", padding: 10, borderBottom: "1px solid #eee" }}>Item</th>
-                  <th style={{ textAlign: "left", padding: 10, borderBottom: "1px solid #eee" }}>Unit</th>
-                  <th style={{ textAlign: "right", padding: 10, borderBottom: "1px solid #eee" }}>Qty</th>
-                  <th style={{ textAlign: "right", padding: 10, borderBottom: "1px solid #eee" }}>Unit $</th>
-                  <th style={{ textAlign: "right", padding: 10, borderBottom: "1px solid #eee" }}>Ext $</th>
+                <tr style={{ background: "#eef3ff" }}>
+                  <th style={{ textAlign: "left", padding: 10, borderBottom: "2px solid rgba(11,42,74,.10)", color: "var(--navy)" }}>Item</th>
+                  <th style={{ textAlign: "left", padding: 10, borderBottom: "2px solid rgba(11,42,74,.10)", color: "var(--navy)" }}>Unit</th>
+                  <th style={{ textAlign: "right", padding: 10, borderBottom: "2px solid rgba(11,42,74,.10)", color: "var(--navy)" }}>Qty</th>
+                  <th style={{ textAlign: "right", padding: 10, borderBottom: "2px solid rgba(11,42,74,.10)", color: "var(--navy)" }}>Unit $</th>
+                  <th style={{ textAlign: "right", padding: 10, borderBottom: "2px solid rgba(11,42,74,.10)", color: "var(--navy)" }}>Ext $</th>
                 </tr>
               </thead>
               <tbody>
                 {displayItems.map((it) => (
                   <tr key={it.key}>
-                    <td style={{ padding: 10, borderBottom: "1px solid #eee" }}>{it.name}</td>
-                    <td style={{ padding: 10, borderBottom: "1px solid #eee" }}>{it.unit}</td>
-                    <td style={{ padding: 10, borderBottom: "1px solid #eee", textAlign: "right" }}>{it.qty}</td>
+                    <td style={{ padding: 10, borderBottom: "1px solid var(--border)" }}>{it.name}</td>
+                    <td style={{ padding: 10, borderBottom: "1px solid var(--border)" }}>{it.unit}</td>
+                    <td style={{ padding: 10, borderBottom: "1px solid var(--border)", textAlign: "right" }}>{it.qty}</td>
 
-                    {/* ✅ always show cents for every Unit $ input */}
-                    <td style={{ padding: 10, borderBottom: "1px solid #eee", textAlign: "right" }}>
+                    <td style={{ padding: 10, borderBottom: "1px solid var(--border)", textAlign: "right" }}>
                       {it.ext == null ? (
-                        <span style={{ color: "#777" }}>Qty only</span>
+                        <span style={{ color: "var(--muted)", fontWeight: 800 }}>Qty only</span>
                       ) : (
                         <input
                           type="number"
@@ -960,29 +1055,31 @@ export default function App() {
                               [it.priceKey]: Number(e.target.value),
                             }))
                           }
-                          style={{ width: 90, textAlign: "right" }}
+                          style={{ width: 98, textAlign: "right" }}
                         />
                       )}
                     </td>
 
-                    <td style={{ padding: 10, borderBottom: "1px solid #eee", textAlign: "right" }}>
-                      {it.ext == null ? <span style={{ color: "#777" }}>—</span> : money(it.ext)}
+                    <td style={{ padding: 10, borderBottom: "1px solid var(--border)", textAlign: "right" }}>
+                      {it.ext == null ? <span style={{ color: "var(--muted)", fontWeight: 800 }}>—</span> : money(it.ext)}
                     </td>
                   </tr>
                 ))}
 
                 <tr>
-                  <td colSpan={4} style={{ padding: 10, textAlign: "right", fontWeight: 900 }}>
+                  <td colSpan={4} style={{ padding: 10, textAlign: "right", fontWeight: 950, color: "var(--navy)" }}>
                     Total
                   </td>
-                  <td style={{ padding: 10, textAlign: "right", fontWeight: 900 }}>{money(masterTotal)}</td>
+                  <td style={{ padding: 10, textAlign: "right", fontWeight: 950, color: "var(--navy)" }}>
+                    {money(masterTotal)}
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
 
           {detailLevel === "summary" && masterItems.length !== displayItems.length && (
-            <div style={{ fontSize: 12, color: "#555", marginTop: 10 }}>
+            <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 10, fontWeight: 700 }}>
               Summary hides internal takeoff lines (adhesives, trims, fasteners, accessories), but the total includes them.
               Switch to Detailed to see every component.
             </div>
@@ -992,9 +1089,3 @@ export default function App() {
     </div>
   );
 }
-
-
-
-
-
-
