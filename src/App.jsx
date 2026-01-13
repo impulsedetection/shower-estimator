@@ -42,7 +42,7 @@ const WATERPROOF_SYSTEMS = [
 
 const DEFAULT_PRICES = {
   // Panels
-  PANEL: 0, // per panel (if you include panel price)
+  PANEL: 0.0,
 
   // Consumables
   ADH_TUBE: 6.98,
@@ -310,7 +310,7 @@ export default function App() {
   const [prices, setPrices] = useState(DEFAULT_PRICES);
   const [includePanelPrice, setIncludePanelPrice] = useState(false);
 
-  // ✅ View control: Summary vs Detailed (DISPLAY ONLY)
+  // View: Summary vs Detailed (DISPLAY ONLY)
   const [detailLevel, setDetailLevel] = useState("summary"); // "summary" | "detailed"
 
   // Customer / Company / Notes
@@ -341,7 +341,7 @@ export default function App() {
   const sheet = SHEET_SIZES.find((s) => s.key === sheetKey) || SHEET_SIZES[1];
   const wp = WATERPROOF_SYSTEMS.find((w) => w.key === wpSystem) || WATERPROOF_SYSTEMS[0];
 
-  // Full calculator model (so detailed view can show everything)
+  // Full calculator model
   const model = useMemo(() => {
     const baseSqft =
       inchesToSqft(wall1, height) +
@@ -394,7 +394,7 @@ export default function App() {
     const tapePerRollLf = 150;
     const tapeRolls = meshTapeLf > 0 ? ceilDiv(meshTapeLf, tapePerRollLf) : 0;
 
-    // Waterproofing enabled only if (a) included, (b) system chosen, (c) there is a sheet-based substrate in scope
+    // Waterproofing enabled only if included + system chosen + sheet-based backer present
     const wpEnabled = includeWaterproofing && wpSystem !== "none" && backerSheets > 0;
 
     // Liquid membrane: gallons = (area * coats) / coveragePerCoat
@@ -403,7 +403,7 @@ export default function App() {
         ? Math.ceil((totalSqft * liqCoats) / Math.max(1, liqCoveragePerGallon))
         : 0;
 
-    // Fabric rolls: simple baseline 1 if liquid system
+    // Fabric rolls baseline
     const liquidFabricRolls = wpEnabled && wpSystem === "liquid" ? 1 : 0;
 
     // Sheet membrane: sqft
@@ -420,10 +420,7 @@ export default function App() {
     const preformedCorners = wpEnabled && wpSystem === "sheet" ? 2 : 0;
 
     return {
-      baseSqft,
       totalSqft,
-
-      panelSqft,
       panelsNeeded,
 
       seams,
@@ -475,7 +472,7 @@ export default function App() {
     bandingWaste,
   ]);
 
-  // ✅ MASTER line items (this is the “true total” for BOTH modes)
+  // MASTER line items (true total for BOTH modes)
   const masterItems = useMemo(() => {
     const items = [];
 
@@ -490,7 +487,7 @@ export default function App() {
       items.push({ key, name, unit, qty, unitPrice: null, ext: null, priceKey, qtyOnly: true });
     };
 
-    // Panels (qty only unless you include panel price)
+    // Panels (qty only unless includePanelPrice)
     if (includePanelPrice) addPriced("PANEL", `Wall panels (${panel.label})`, "panel", model.panelsNeeded, "PANEL");
     else addQtyOnly("PANEL_QTY", `Wall panels (${panel.label})`, "panel", model.panelsNeeded, "PANEL");
 
@@ -537,28 +534,24 @@ export default function App() {
     wpSystem,
   ]);
 
-  // ✅ Total ALWAYS from masterItems (same price for summary/detailed)
+  // Total ALWAYS from masterItems (same for summary/detailed)
   const masterTotal = useMemo(() => {
     return masterItems.filter((x) => x.ext != null).reduce((sum, x) => sum + x.ext, 0);
   }, [masterItems]);
 
-  // DISPLAY items (filter only)
+  // Display items (filter only)
   const displayItems = useMemo(() => {
     if (detailLevel === "detailed") return masterItems;
 
-    // Summary view: show the “headline” items but keep the same total
+    // Summary view: show headline lines only, total still includes everything
     const keep = new Set([
       "PANEL",
       "PANEL_QTY",
       "BACKER",
       "WP_LIQ",
       "WP_SHEET",
-      // You can choose to show silicone/adhesive in summary if you want:
-      // "ADH",
-      // "SIL",
     ]);
 
-    // If WP is enabled, keep only the core WP product line (not accessories)
     return masterItems.filter((it) => keep.has(it.key));
   }, [detailLevel, masterItems]);
 
@@ -574,8 +567,8 @@ export default function App() {
         walls: `${wall1}" / ${wall2}" / ${wall3}" @ ${height}"`,
         notes,
       },
-      rows: displayItems, // print what user is viewing
-      total: masterTotal, // BUT total stays the master total
+      rows: displayItems, // print current view
+      total: masterTotal, // total always master
     });
 
     const w = window.open("", "_blank");
@@ -590,6 +583,12 @@ export default function App() {
     borderRadius: 14,
     padding: 16,
     background: "white",
+  };
+
+  // ✅ CENTS-FORMAT HELPER FOR ALL PRICE INPUTS
+  const priceStr = (k) => {
+    const v = Number(prices[k]);
+    return Number.isFinite(v) ? v.toFixed(2) : "0.00";
   };
 
   return (
@@ -643,10 +642,22 @@ export default function App() {
 
           <h3 style={{ marginTop: 0 }}>Dimensions</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div><label style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Wall 1 (in)</label><input type="number" value={wall1} onChange={(e) => setWall1(Number(e.target.value))} style={{ width: "100%" }} /></div>
-            <div><label style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Back wall (in)</label><input type="number" value={wall2} onChange={(e) => setWall2(Number(e.target.value))} style={{ width: "100%" }} /></div>
-            <div><label style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Wall 3 (in)</label><input type="number" value={wall3} onChange={(e) => setWall3(Number(e.target.value))} style={{ width: "100%" }} /></div>
-            <div><label style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Height (in)</label><input type="number" value={height} onChange={(e) => setHeight(Number(e.target.value))} style={{ width: "100%" }} /></div>
+            <div>
+              <label style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Wall 1 (in)</label>
+              <input type="number" value={wall1} onChange={(e) => setWall1(Number(e.target.value))} style={{ width: "100%" }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Back wall (in)</label>
+              <input type="number" value={wall2} onChange={(e) => setWall2(Number(e.target.value))} style={{ width: "100%" }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Wall 3 (in)</label>
+              <input type="number" value={wall3} onChange={(e) => setWall3(Number(e.target.value))} style={{ width: "100%" }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Height (in)</label>
+              <input type="number" value={height} onChange={(e) => setHeight(Number(e.target.value))} style={{ width: "100%" }} />
+            </div>
           </div>
 
           <hr />
@@ -703,7 +714,12 @@ export default function App() {
 
           <div style={{ marginBottom: 10 }}>
             <label style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Sheet Size</label>
-            <select value={sheetKey} onChange={(e) => setSheetKey(e.target.value)} style={{ width: "100%" }} disabled={!backer.requiresSheets}>
+            <select
+              value={sheetKey}
+              onChange={(e) => setSheetKey(e.target.value)}
+              style={{ width: "100%" }}
+              disabled={!backer.requiresSheets}
+            >
               {SHEET_SIZES.map((s) => (
                 <option key={s.key} value={s.key}>
                   {s.label}
@@ -752,13 +768,7 @@ export default function App() {
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: "#666", fontWeight: 700 }}>Coverage (sf/gal/coat)</div>
-                  <input
-                    type="number"
-                    min="1"
-                    value={liqCoveragePerGallon}
-                    onChange={(e) => setLiqCoveragePerGallon(Number(e.target.value))}
-                    style={{ width: "100%" }}
-                  />
+                  <input type="number" min="1" value={liqCoveragePerGallon} onChange={(e) => setLiqCoveragePerGallon(Number(e.target.value))} style={{ width: "100%" }} />
                 </div>
               </div>
               <div style={{ fontSize: 12, color: "#555", marginTop: 6 }}>
@@ -875,6 +885,8 @@ export default function App() {
                     <td style={{ padding: 10, borderBottom: "1px solid #eee" }}>{it.name}</td>
                     <td style={{ padding: 10, borderBottom: "1px solid #eee" }}>{it.unit}</td>
                     <td style={{ padding: 10, borderBottom: "1px solid #eee", textAlign: "right" }}>{it.qty}</td>
+
+                    {/* ✅ FIX: always show cents for every Unit $ input */}
                     <td style={{ padding: 10, borderBottom: "1px solid #eee", textAlign: "right" }}>
                       {it.ext == null ? (
                         <span style={{ color: "#777" }}>Qty only</span>
@@ -882,19 +894,24 @@ export default function App() {
                         <input
                           type="number"
                           step="0.01"
-                          value={prices[it.priceKey]}
-                          onChange={(e) => setPrices((p) => ({ ...p, [it.priceKey]: Number(e.target.value) }))}
+                          value={priceStr(it.priceKey)}
+                          onChange={(e) =>
+                            setPrices((p) => ({
+                              ...p,
+                              [it.priceKey]: Number(e.target.value),
+                            }))
+                          }
                           style={{ width: 90, textAlign: "right" }}
                         />
                       )}
                     </td>
+
                     <td style={{ padding: 10, borderBottom: "1px solid #eee", textAlign: "right" }}>
                       {it.ext == null ? <span style={{ color: "#777" }}>—</span> : money(it.ext)}
                     </td>
                   </tr>
                 ))}
 
-                {/* Always show master total */}
                 <tr>
                   <td colSpan={4} style={{ padding: 10, textAlign: "right", fontWeight: 900 }}>Total</td>
                   <td style={{ padding: 10, textAlign: "right", fontWeight: 900 }}>{money(masterTotal)}</td>
@@ -905,7 +922,7 @@ export default function App() {
 
           {detailLevel === "summary" && masterItems.length !== displayItems.length && (
             <div style={{ fontSize: 12, color: "#555", marginTop: 10 }}>
-              Summary hides some internal takeoff lines (adhesives, trims, fasteners, accessories), but the total includes them.
+              Summary hides internal takeoff lines (adhesives, trims, fasteners, accessories), but the total includes them.
               Switch to Detailed to see every component.
             </div>
           )}
