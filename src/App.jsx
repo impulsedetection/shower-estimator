@@ -556,12 +556,13 @@ export default function App() {
 
   // Context help (F2)
   const [helpOpen, setHelpOpen] = useState(false);
-  const [activeHelpKey, setActiveHelpKey] = useState("wall1");
+  const [activeHelpKey, setActiveHelpKey] = useState(null);
+  const [helpAnchor, setHelpAnchor] = useState(null);
   const firstMeasureRef = useRef(null);
 
   useEffect(() => {
     // Always reset help focus on first load (so it doesn't "resume" from a prior hot-reload state)
-    setActiveHelpKey("wall1");
+    setActiveHelpKey(null);
     // Optionally focus the first measurement so keyboard users start in the right place
     // (Small timeout avoids race with initial render/layout.)
     setTimeout(() => firstMeasureRef.current?.focus?.(), 0);
@@ -573,38 +574,61 @@ export default function App() {
       }
     };
 
-    // Robust help detection:
-    // Instead of relying on "positional" focus order, we listen globally for focus/click/hover
-    // and read the nearest data-helpkey. This correctly handles <select>, <label><input/></label>, etc.
-    const onAnyInteraction = (e) => {
-      const t = e.target;
-      const el = t?.closest?.("[data-helpkey]");
+// Mobile-first help detection:
+    // - Show help bubble when hovering with mouse OR touching a control
+    // - Hide help bubble immediately when user clicks/taps/focuses to edit
+    const showHelpForTarget = (target) => {
+      if (!helpOpen) return;
+      const el = target?.closest?.("[data-helpkey]");
       if (!el) return;
       const key = el.getAttribute("data-helpkey");
-      if (key) setActiveHelpKey(key);
+      if (!key) return;
+      const r = el.getBoundingClientRect();
+      setActiveHelpKey(key);
+      setHelpAnchor({ top: r.top, left: r.left, width: r.width, height: r.height });
+    };
+
+    const hideHelp = () => {
+      if (!helpOpen) return;
+      setActiveHelpKey(null);
+      setHelpAnchor(null);
+    };
+
+    const onMouseOver = (e) => showHelpForTarget(e.target);
+    const onTouchStart = (e) => {
+      // Touch users don't have hover; touchstart is a "peek" at help
+      showHelpForTarget(e.target);
     };
 
     window.addEventListener("keydown", onKeyDown);
-    document.addEventListener("focusin", onAnyInteraction, true);
-    document.addEventListener("pointerdown", onAnyInteraction, true);
-    document.addEventListener("mouseover", onAnyInteraction, true);
+    document.addEventListener("mouseover", onMouseOver, true);
+    document.addEventListener("touchstart", onTouchStart, { capture: true, passive: true });
+    document.addEventListener("pointerdown", hideHelp, true);
+    document.addEventListener("focusin", hideHelp, true);
+
+    // Keep position accurate while scrolling/resizing
+    const onScrollOrResize = () => {
+      if (!helpOpen || !activeHelpKey) return;
+      const el = document.querySelector(`[data-helpkey="${activeHelpKey}"]`);
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setHelpAnchor({ top: r.top, left: r.left, width: r.width, height: r.height });
+    };
+    window.addEventListener("scroll", onScrollOrResize, true);
+    window.addEventListener("resize", onScrollOrResize, true);
 
     return () => {
       window.removeEventListener("keydown", onKeyDown);
-      document.removeEventListener("focusin", onAnyInteraction, true);
-      document.removeEventListener("pointerdown", onAnyInteraction, true);
-      document.removeEventListener("mouseover", onAnyInteraction, true);
+      document.removeEventListener("mouseover", onMouseOver, true);
+      document.removeEventListener("touchstart", onTouchStart, true);
+      document.removeEventListener("pointerdown", hideHelp, true);
+      document.removeEventListener("focusin", hideHelp, true);
+      window.removeEventListener("scroll", onScrollOrResize, true);
+      window.removeEventListener("resize", onScrollOrResize, true);
     };
   }, []);
 
-  const helpProps = (key) => ({
-    "data-helpkey": key,
-    // Keep local handlers too (nice for React synthetic events and mobile)
-    onFocus: () => setActiveHelpKey(key),
-    onClick: () => setActiveHelpKey(key),
-    onPointerDown: () => setActiveHelpKey(key),
-    onMouseEnter: () => setActiveHelpKey(key),
-  });
+  const helpProps = (key) => ({ "data-helpkey": key });
 
   // Lookups
   const rule = MATERIAL_RULES[material];
@@ -918,7 +942,7 @@ export default function App() {
       style={{
         padding: 24,
         fontFamily: "Segoe UI, Arial",
-        paddingRight: helpOpen ? 380 : 24,
+        paddingRight: 24,
         transition: "padding-right 160ms ease",
       }}
     >
@@ -1001,25 +1025,25 @@ export default function App() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
               <div style={smallLabel}>Customer Name</div>
-              <input value={customer.name} onChange={(e) => setCustomer((c) => ({ ...c, name: e.target.value }))} style={{ width: "100%" }} {...helpProps("customer_name")} />
+              <input {...helpProps("customer_name")} value={customer.name} onChange={(e) => setCustomer((c) => ({ ...c, name: e.target.value }))} style={{ width: "100%" }} {...helpProps("customer_name")} />
             </div>
             <div>
               <div style={smallLabel}>Customer Phone</div>
-              <input value={customer.phone} onChange={(e) => setCustomer((c) => ({ ...c, phone: e.target.value }))} style={{ width: "100%" }} {...helpProps("customer_phone")} />
+              <input {...helpProps("customer_phone")} value={customer.phone} onChange={(e) => setCustomer((c) => ({ ...c, phone: e.target.value }))} style={{ width: "100%" }} {...helpProps("customer_phone")} />
             </div>
             <div>
               <div style={smallLabel}>Customer Email</div>
-              <input value={customer.email} onChange={(e) => setCustomer((c) => ({ ...c, email: e.target.value }))} style={{ width: "100%" }} {...helpProps("customer_email")} />
+              <input {...helpProps("customer_email")} value={customer.email} onChange={(e) => setCustomer((c) => ({ ...c, email: e.target.value }))} style={{ width: "100%" }} {...helpProps("customer_email")} />
             </div>
             <div>
               <div style={smallLabel}>Job Address</div>
-              <input value={customer.address} onChange={(e) => setCustomer((c) => ({ ...c, address: e.target.value }))} style={{ width: "100%" }} {...helpProps("job_address")} />
+              <input {...helpProps("job_address")} value={customer.address} onChange={(e) => setCustomer((c) => ({ ...c, address: e.target.value }))} style={{ width: "100%" }} {...helpProps("job_address")} />
             </div>
           </div>
 
           <div style={{ marginTop: 10 }}>
             <div style={smallLabel}>Scope / Notes</div>
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} style={{ width: "100%" }} {...helpProps("notes")} />
+            <textarea {...helpProps("notes")} value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} style={{ width: "100%" }} {...helpProps("notes")} />
           </div>
 
           <hr />
@@ -1170,15 +1194,15 @@ export default function App() {
           </div>
 
           <label className="checkboxRow" {...helpProps("includeBacker")}>
-            <input type="checkbox" checked={includeBacker} onChange={(e) => setIncludeBacker(e.target.checked)} {...helpProps("includeBacker")} />
+            <input type="checkbox {...helpProps("includeBacker")}" checked={includeBacker} onChange={(e) => setIncludeBacker(e.target.checked)} {...helpProps("includeBacker")} />
             <span>Include backer sheets</span>
           </label>
           <label className="checkboxRow" {...helpProps("includeBackerScrews")}>
-            <input type="checkbox" checked={includeBackerScrews} onChange={(e) => setIncludeBackerScrews(e.target.checked)} {...helpProps("includeBackerScrews")} />
+            <input type="checkbox {...helpProps("includeBackerScrews")}" checked={includeBackerScrews} onChange={(e) => setIncludeBackerScrews(e.target.checked)} {...helpProps("includeBackerScrews")} />
             <span>Include backer screws</span>
           </label>
           <label className="checkboxRow" {...helpProps("includeBackerTape")}>
-            <input type="checkbox" checked={includeBackerTape} onChange={(e) => setIncludeBackerTape(e.target.checked)} {...helpProps("includeBackerTape")} />
+            <input type="checkbox {...helpProps("includeBackerTape")}" checked={includeBackerTape} onChange={(e) => setIncludeBackerTape(e.target.checked)} {...helpProps("includeBackerTape")} />
             <span>Include mesh tape</span>
           </label>
 
@@ -1186,7 +1210,7 @@ export default function App() {
 
           <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Waterproofing</h3>
           <label className="checkboxRow" {...helpProps("includeWaterproofing")}>
-            <input type="checkbox" checked={includeWaterproofing} onChange={(e) => setIncludeWaterproofing(e.target.checked)} {...helpProps("includeWaterproofing")} />
+            <input type="checkbox {...helpProps("includeWaterproofing")}" checked={includeWaterproofing} onChange={(e) => setIncludeWaterproofing(e.target.checked)} {...helpProps("includeWaterproofing")} />
             <span>Include waterproofing</span>
           </label>
 
@@ -1210,11 +1234,11 @@ export default function App() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
                   <div style={smallLabel}>Coats</div>
-                  <input type="number" min="1" value={liqCoats} onChange={(e) => setLiqCoats(Number(e.target.value))} style={{ width: "100%" }} {...helpProps("liqCoats")} />
+                  <input {...helpProps("liqCoats")} type="number" min="1" value={liqCoats} onChange={(e) => setLiqCoats(Number(e.target.value))} style={{ width: "100%" }} {...helpProps("liqCoats")} />
                 </div>
                 <div>
                   <div style={smallLabel}>Coverage (sf/gal/coat)</div>
-                  <input type="number" min="1" value={liqCoveragePerGallon} onChange={(e) => setLiqCoveragePerGallon(Number(e.target.value))} style={{ width: "100%" }} {...helpProps("liqCoveragePerGallon")} />
+                  <input {...helpProps("liqCoveragePerGallon")} type="number" min="1" value={liqCoveragePerGallon} onChange={(e) => setLiqCoveragePerGallon(Number(e.target.value))} style={{ width: "100%" }} {...helpProps("liqCoveragePerGallon")} />
                 </div>
               </div>
               <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6, fontWeight: 700 }}>
@@ -1227,12 +1251,12 @@ export default function App() {
             <div style={{ border: "1px solid var(--border)", borderRadius: 14, padding: 10, marginBottom: 10, background: "#fff" }}>
               <div style={{ fontWeight: 950, marginBottom: 6, color: "var(--navy)" }}>Sheet Settings</div>
               <label className="checkboxRow" {...helpProps("includeBanding")}>
-                <input type="checkbox" checked={includeBanding} onChange={(e) => setIncludeBanding(e.target.checked)} {...helpProps("includeBanding")} />
+                <input type="checkbox {...helpProps("includeBanding")}" checked={includeBanding} onChange={(e) => setIncludeBanding(e.target.checked)} {...helpProps("includeBanding")} />
                 <span>Include banding</span>
               </label>
               <div>
                 <div style={smallLabel}>Banding Waste (fraction)</div>
-                <input type="number" step="0.01" min="0" value={bandingWaste} onChange={(e) => setBandingWaste(Number(e.target.value))} style={{ width: "100%" }} {...helpProps("bandingWaste")} />
+                <input {...helpProps("bandingWaste")} type="number" step="0.01" min="0" value={bandingWaste} onChange={(e) => setBandingWaste(Number(e.target.value))} style={{ width: "100%" }} {...helpProps("bandingWaste")} />
               </div>
               <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6, fontWeight: 700 }}>
                 Est: membrane {model.sheetMembraneSqft} sf, banding {model.bandLf} lf, corners {model.preformedCorners}
@@ -1244,32 +1268,32 @@ export default function App() {
 
           <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Install Options</h3>
           <label className="checkboxRow" {...helpProps("includeAdhesive")}>
-            <input type="checkbox" checked={includeAdhesive} onChange={(e) => setIncludeAdhesive(e.target.checked)} {...helpProps("includeAdhesive")} />
+            <input type="checkbox {...helpProps("includeAdhesive")}" checked={includeAdhesive} onChange={(e) => setIncludeAdhesive(e.target.checked)} {...helpProps("includeAdhesive")} />
             <span>Include adhesive</span>
           </label>
           <label className="checkboxRow" {...helpProps("includeSilicone")}>
-            <input type="checkbox" checked={includeSilicone} onChange={(e) => setIncludeSilicone(e.target.checked)} {...helpProps("includeSilicone")} />
+            <input type="checkbox {...helpProps("includeSilicone")}" checked={includeSilicone} onChange={(e) => setIncludeSilicone(e.target.checked)} {...helpProps("includeSilicone")} />
             <span>Include silicone</span>
           </label>
           <label className="checkboxRow" {...helpProps("seamsUseTrim")}>
-            <input type="checkbox" checked={seamsUseTrim} onChange={(e) => setSeamsUseTrim(e.target.checked)} {...helpProps("seamsUseTrim")} />
+            <input type="checkbox {...helpProps("seamsUseTrim")}" checked={seamsUseTrim} onChange={(e) => setSeamsUseTrim(e.target.checked)} {...helpProps("seamsUseTrim")} />
             <span>Seams use H-joint trim (not sealant)</span>
           </label>
 
           <label className="checkboxRow" {...helpProps("includeInsideCornerTrim")}>
-            <input type="checkbox" checked={includeInsideCornerTrim} onChange={(e) => setIncludeInsideCornerTrim(e.target.checked)} {...helpProps("includeInsideCornerTrim")} />
+            <input type="checkbox {...helpProps("includeInsideCornerTrim")}" checked={includeInsideCornerTrim} onChange={(e) => setIncludeInsideCornerTrim(e.target.checked)} {...helpProps("includeInsideCornerTrim")} />
             <span>Inside corner trim</span>
           </label>
           <label className="checkboxRow" {...helpProps("includeEdgeTrim")}>
-            <input type="checkbox" checked={includeEdgeTrim} onChange={(e) => setIncludeEdgeTrim(e.target.checked)} {...helpProps("includeEdgeTrim")} />
+            <input type="checkbox {...helpProps("includeEdgeTrim")}" checked={includeEdgeTrim} onChange={(e) => setIncludeEdgeTrim(e.target.checked)} {...helpProps("includeEdgeTrim")} />
             <span>Edge/J-trim</span>
           </label>
           <label className="checkboxRow" {...helpProps("includeTopTrim")}>
-            <input type="checkbox" checked={includeTopTrim} onChange={(e) => setIncludeTopTrim(e.target.checked)} {...helpProps("includeTopTrim")} />
+            <input type="checkbox {...helpProps("includeTopTrim")}" checked={includeTopTrim} onChange={(e) => setIncludeTopTrim(e.target.checked)} {...helpProps("includeTopTrim")} />
             <span>Top trim</span>
           </label>
           <label className="checkboxRow" {...helpProps("includeBottomTrim")}>
-            <input type="checkbox" checked={includeBottomTrim} onChange={(e) => setIncludeBottomTrim(e.target.checked)} {...helpProps("includeBottomTrim")} />
+            <input type="checkbox {...helpProps("includeBottomTrim")}" checked={includeBottomTrim} onChange={(e) => setIncludeBottomTrim(e.target.checked)} {...helpProps("includeBottomTrim")} />
             <span>Bottom trim</span>
           </label>
 
@@ -1277,7 +1301,7 @@ export default function App() {
 
           <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Pricing</h3>
           <label className="checkboxRow" {...helpProps("includePanelPrice")}>
-            <input type="checkbox" checked={includePanelPrice} onChange={(e) => setIncludePanelPrice(e.target.checked)} {...helpProps("includePanelPrice")} />
+            <input type="checkbox {...helpProps("includePanelPrice")}" checked={includePanelPrice} onChange={(e) => setIncludePanelPrice(e.target.checked)} {...helpProps("includePanelPrice")} />
             <span>Include panel price in total</span>
           </label>
 
@@ -1375,66 +1399,30 @@ export default function App() {
       </div>
 
       {/* Context help panel (toggle with F2). Space is reserved via paddingRight so it never covers form data. */}
-      {helpOpen && (
+      {/* Inline help bubble (shows above hovered/touched control; hides on tap/click/focus) */}
+      {helpOpen && activeHelp && helpAnchor && (
         <div
-          role="dialog"
-          aria-label="Field help"
           style={{
             position: "fixed",
-            top: 24,
-            right: 24,
-            width: 340,
-            maxHeight: "calc(100vh - 48px)",
-            overflow: "auto",
+            left: Math.max(12, Math.min(window.innerWidth - 372, helpAnchor.left)),
+            top: Math.max(12, helpAnchor.top - 10),
+            transform: "translateY(-100%)",
+            width: 360,
+            zIndex: 80,
+            background: "#ffffff",
             border: "1px solid var(--border)",
-            borderRadius: 16,
-            background: "white",
+            borderRadius: 14,
             boxShadow: "0 12px 30px rgba(0,0,0,0.12)",
-            padding: 14,
-            zIndex: 50,
+            padding: 12,
+            pointerEvents: "none",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-            <div style={{ fontWeight: 950, color: "var(--navy)" }}>Help (F2)</div>
-            <button
-              onClick={() => setHelpOpen(false)}
-              style={{
-                border: "1px solid var(--border)",
-                background: "white",
-                borderRadius: 12,
-                padding: "6px 10px",
-                cursor: "pointer",
-                fontWeight: 900,
-                color: "var(--navy)",
-              }}
-            >
-              Close
-            </button>
-          </div>
-
-          <div style={{ marginTop: 10, borderTop: "1px solid var(--border)", paddingTop: 10 }}>
-            {activeHelp ? (
-              <>
-                <div style={{ fontWeight: 950, color: "var(--red)", marginBottom: 6 }}>{activeHelp.title}</div>
-                <div style={{ fontSize: 13, lineHeight: 1.4, color: "#111" }}>{activeHelp.body}</div>
-                {activeHelp.tip ? (
-                  <div style={{ marginTop: 10, fontSize: 12, color: "var(--muted)", fontWeight: 800 }}>
-                    Tip: {activeHelp.tip}
-                  </div>
-                ) : null}
-              </>
-            ) : (
-              <div style={{ fontSize: 13, color: "var(--muted)", fontWeight: 800 }}>
-                Click into any field, then press F2.
-              </div>
-            )}
-          </div>
-
-          <div style={{ marginTop: 12, fontSize: 11, color: "var(--muted)", fontWeight: 800 }}>
-            Focus a field (Tab/Click) to change this help. Press F2 again to toggle.
-          </div>
+          <div style={{ fontWeight: 950, color: "var(--red)", marginBottom: 6 }}>{activeHelp.title}</div>
+          <div style={{ fontSize: 13, lineHeight: 1.35, color: "#111" }}>{activeHelp.body}</div>
         </div>
       )}
+
     </div>
   );
 }
+
