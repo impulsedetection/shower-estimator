@@ -1025,25 +1025,25 @@ export default function App() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
               <div style={smallLabel}>Customer Name</div>
-              <input {...helpProps("customer_name")} value={customer.name} onChange={(e) => setCustomer((c) => ({ ...c, name: e.target.value }))} style={{ width: "100%" }} {...helpProps("customer_name")} />
+              <input value={customer.name} onChange={(e) => setCustomer((c) => ({ ...c, name: e.target.value }))} style={{ width: "100%" }} />
             </div>
             <div>
               <div style={smallLabel}>Customer Phone</div>
-              <input {...helpProps("customer_phone")} value={customer.phone} onChange={(e) => setCustomer((c) => ({ ...c, phone: e.target.value }))} style={{ width: "100%" }} {...helpProps("customer_phone")} />
+              <input value={customer.phone} onChange={(e) => setCustomer((c) => ({ ...c, phone: e.target.value }))} style={{ width: "100%" }} />
             </div>
             <div>
               <div style={smallLabel}>Customer Email</div>
-              <input {...helpProps("customer_email")} value={customer.email} onChange={(e) => setCustomer((c) => ({ ...c, email: e.target.value }))} style={{ width: "100%" }} {...helpProps("customer_email")} />
+              <input value={customer.email} onChange={(e) => setCustomer((c) => ({ ...c, email: e.target.value }))} style={{ width: "100%" }} />
             </div>
             <div>
               <div style={smallLabel}>Job Address</div>
-              <input {...helpProps("job_address")} value={customer.address} onChange={(e) => setCustomer((c) => ({ ...c, address: e.target.value }))} style={{ width: "100%" }} {...helpProps("job_address")} />
+              <input value={customer.address} onChange={(e) => setCustomer((c) => ({ ...c, address: e.target.value }))} style={{ width: "100%" }} />
             </div>
           </div>
 
           <div style={{ marginTop: 10 }}>
             <div style={smallLabel}>Scope / Notes</div>
-            <textarea {...helpProps("notes")} value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} style={{ width: "100%" }} {...helpProps("notes")} />
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} style={{ width: "100%" }} />
           </div>
 
           <hr />
@@ -1055,7 +1055,6 @@ export default function App() {
               value={detailLevel}
               onChange={(e) => setDetailLevel(e.target.value)}
               style={{ width: "100%" }}
-              {...helpProps("detailLevel")}
             >
               <option value="summary">Summary (customer-facing)</option>
               <option value="detailed">Detailed (contractor takeoff)</option>
@@ -1080,7 +1079,6 @@ export default function App() {
                 value={wall1}
                 onChange={(e) => setWall1(Number(e.target.value))}
                 style={{ width: "100%" }}
-                {...helpProps("wall1")}
               />
             </div>
             <div>
@@ -1090,7 +1088,6 @@ export default function App() {
                 value={wall2}
                 onChange={(e) => setWall2(Number(e.target.value))}
                 style={{ width: "100%" }}
-                {...helpProps("wall2")}
               />
             </div>
             <div>
@@ -1100,7 +1097,6 @@ export default function App() {
                 value={wall3}
                 onChange={(e) => setWall3(Number(e.target.value))}
                 style={{ width: "100%" }}
-                {...helpProps("wall3")}
               />
             </div>
             <div>
@@ -1110,7 +1106,6 @@ export default function App() {
                 value={height}
                 onChange={(e) => setHeight(Number(e.target.value))}
                 style={{ width: "100%" }}
-                {...helpProps("height")}
               />
             </div>
           </div>
@@ -1125,7 +1120,6 @@ export default function App() {
               value={material}
               onChange={(e) => setMaterial(e.target.value)}
               style={{ width: "100%" }}
-              {...helpProps("material")}
             >
               <option value="pvc">PVC Panels</option>
               <option value="acrylic">Acrylic Panels</option>
@@ -1142,7 +1136,6 @@ export default function App() {
               value={panelKey}
               onChange={(e) => setPanelKey(e.target.value)}
               style={{ width: "100%" }}
-              {...helpProps("panelSize")}
             >
               {PANEL_SIZES.map((p) => (
                 <option key={p.key} value={p.key}>
@@ -1158,7 +1151,6 @@ export default function App() {
               value={trimLenKey}
               onChange={(e) => setTrimLenKey(e.target.value)}
               style={{ width: "100%" }}
-              {...helpProps("trimLen")}
             >
               {TRIM_LENGTHS.map((t) => (
                 <option key={t.key} value={t.key}>
@@ -1173,7 +1165,7 @@ export default function App() {
           <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Backer / Substrate</h3>
           <div style={{ marginBottom: 10 }}>
             <div style={smallLabel}>Backer Type</div>
-            <select value={backerType} onChange={(e) => setBackerType(e.target.value)} style={{ width: "100%" }} {...helpProps("backerType")}>
+            <select value={backerType} onChange={(e) => setBackerType(e.target.value)} style={{ width: "100%" }}>
               {BACKER_TYPES.map((b) => (
                 <option key={b.key} value={b.key}>
                   {b.label}
@@ -1184,7 +1176,7 @@ export default function App() {
 
           <div style={{ marginBottom: 10 }}>
             <div style={smallLabel}>Sheet Size</div>
-            <select value={sheetKey} onChange={(e) => setSheetKey(e.target.value)} style={{ width: "100%" }} disabled={!backer.requiresSheets} {...helpProps("sheetSize")}>
+            <select value={sheetKey} onChange={(e) => setSheetKey(e.target.value)} style={{ width: "100%" }} disabled={!backer.requiresSheets}>
               {SHEET_SIZES.map((s) => (
                 <option key={s.key} value={s.key}>
                   {s.label}
@@ -1194,15 +1186,15 @@ export default function App() {
           </div>
 
           <label className="checkboxRow" {...helpProps("includeBacker")}>
-            <input type="checkbox {...helpProps("includeBacker")}" checked={includeBacker} onChange={(e) => setIncludeBacker(e.target.checked)} {...helpProps("includeBacker")} />
+            <input type="checkbox" checked={includeBacker} onChange={(e) => setIncludeBacker(e.target.checked)} />
             <span>Include backer sheets</span>
           </label>
           <label className="checkboxRow" {...helpProps("includeBackerScrews")}>
-            <input type="checkbox {...helpProps("includeBackerScrews")}" checked={includeBackerScrews} onChange={(e) => setIncludeBackerScrews(e.target.checked)} {...helpProps("includeBackerScrews")} />
+            <input type="checkbox" checked={includeBackerScrews} onChange={(e) => setIncludeBackerScrews(e.target.checked)} />
             <span>Include backer screws</span>
           </label>
           <label className="checkboxRow" {...helpProps("includeBackerTape")}>
-            <input type="checkbox {...helpProps("includeBackerTape")}" checked={includeBackerTape} onChange={(e) => setIncludeBackerTape(e.target.checked)} {...helpProps("includeBackerTape")} />
+            <input type="checkbox" checked={includeBackerTape} onChange={(e) => setIncludeBackerTape(e.target.checked)} />
             <span>Include mesh tape</span>
           </label>
 
@@ -1210,13 +1202,13 @@ export default function App() {
 
           <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Waterproofing</h3>
           <label className="checkboxRow" {...helpProps("includeWaterproofing")}>
-            <input type="checkbox {...helpProps("includeWaterproofing")}" checked={includeWaterproofing} onChange={(e) => setIncludeWaterproofing(e.target.checked)} {...helpProps("includeWaterproofing")} />
+            <input type="checkbox" checked={includeWaterproofing} onChange={(e) => setIncludeWaterproofing(e.target.checked)} />
             <span>Include waterproofing</span>
           </label>
 
           <div style={{ marginBottom: 10 }}>
             <div style={smallLabel}>System</div>
-            <select value={wpSystem} onChange={(e) => setWpSystem(e.target.value)} style={{ width: "100%" }} disabled={!includeWaterproofing} {...helpProps("wpSystem")}>
+            <select value={wpSystem} onChange={(e) => setWpSystem(e.target.value)} style={{ width: "100%" }} disabled={!includeWaterproofing}>
               {WATERPROOF_SYSTEMS.map((w) => (
                 <option key={w.key} value={w.key}>
                   {w.label}
@@ -1234,11 +1226,11 @@ export default function App() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
                   <div style={smallLabel}>Coats</div>
-                  <input {...helpProps("liqCoats")} type="number" min="1" value={liqCoats} onChange={(e) => setLiqCoats(Number(e.target.value))} style={{ width: "100%" }} {...helpProps("liqCoats")} />
+                  <input type="number" min="1" value={liqCoats} onChange={(e) => setLiqCoats(Number(e.target.value))} style={{ width: "100%" }} />
                 </div>
                 <div>
                   <div style={smallLabel}>Coverage (sf/gal/coat)</div>
-                  <input {...helpProps("liqCoveragePerGallon")} type="number" min="1" value={liqCoveragePerGallon} onChange={(e) => setLiqCoveragePerGallon(Number(e.target.value))} style={{ width: "100%" }} {...helpProps("liqCoveragePerGallon")} />
+                  <input type="number" min="1" value={liqCoveragePerGallon} onChange={(e) => setLiqCoveragePerGallon(Number(e.target.value))} style={{ width: "100%" }} />
                 </div>
               </div>
               <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6, fontWeight: 700 }}>
@@ -1251,12 +1243,12 @@ export default function App() {
             <div style={{ border: "1px solid var(--border)", borderRadius: 14, padding: 10, marginBottom: 10, background: "#fff" }}>
               <div style={{ fontWeight: 950, marginBottom: 6, color: "var(--navy)" }}>Sheet Settings</div>
               <label className="checkboxRow" {...helpProps("includeBanding")}>
-                <input type="checkbox {...helpProps("includeBanding")}" checked={includeBanding} onChange={(e) => setIncludeBanding(e.target.checked)} {...helpProps("includeBanding")} />
+            <input type="checkbox" checked={includeBanding} onChange={(e) => setIncludeBanding(e.target.checked)} />
                 <span>Include banding</span>
               </label>
               <div>
                 <div style={smallLabel}>Banding Waste (fraction)</div>
-                <input {...helpProps("bandingWaste")} type="number" step="0.01" min="0" value={bandingWaste} onChange={(e) => setBandingWaste(Number(e.target.value))} style={{ width: "100%" }} {...helpProps("bandingWaste")} />
+                <input type="number" step="0.01" min="0" value={bandingWaste} onChange={(e) => setBandingWaste(Number(e.target.value))} style={{ width: "100%" }} />
               </div>
               <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6, fontWeight: 700 }}>
                 Est: membrane {model.sheetMembraneSqft} sf, banding {model.bandLf} lf, corners {model.preformedCorners}
@@ -1268,32 +1260,32 @@ export default function App() {
 
           <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Install Options</h3>
           <label className="checkboxRow" {...helpProps("includeAdhesive")}>
-            <input type="checkbox {...helpProps("includeAdhesive")}" checked={includeAdhesive} onChange={(e) => setIncludeAdhesive(e.target.checked)} {...helpProps("includeAdhesive")} />
+            <input type="checkbox" checked={includeAdhesive} onChange={(e) => setIncludeAdhesive(e.target.checked)} />
             <span>Include adhesive</span>
           </label>
           <label className="checkboxRow" {...helpProps("includeSilicone")}>
-            <input type="checkbox {...helpProps("includeSilicone")}" checked={includeSilicone} onChange={(e) => setIncludeSilicone(e.target.checked)} {...helpProps("includeSilicone")} />
+            <input type="checkbox" checked={includeSilicone} onChange={(e) => setIncludeSilicone(e.target.checked)} />
             <span>Include silicone</span>
           </label>
           <label className="checkboxRow" {...helpProps("seamsUseTrim")}>
-            <input type="checkbox {...helpProps("seamsUseTrim")}" checked={seamsUseTrim} onChange={(e) => setSeamsUseTrim(e.target.checked)} {...helpProps("seamsUseTrim")} />
+            <input type="checkbox" checked={seamsUseTrim} onChange={(e) => setSeamsUseTrim(e.target.checked)} />
             <span>Seams use H-joint trim (not sealant)</span>
           </label>
 
           <label className="checkboxRow" {...helpProps("includeInsideCornerTrim")}>
-            <input type="checkbox {...helpProps("includeInsideCornerTrim")}" checked={includeInsideCornerTrim} onChange={(e) => setIncludeInsideCornerTrim(e.target.checked)} {...helpProps("includeInsideCornerTrim")} />
+            <input type="checkbox" checked={includeInsideCornerTrim} onChange={(e) => setIncludeInsideCornerTrim(e.target.checked)} />
             <span>Inside corner trim</span>
           </label>
           <label className="checkboxRow" {...helpProps("includeEdgeTrim")}>
-            <input type="checkbox {...helpProps("includeEdgeTrim")}" checked={includeEdgeTrim} onChange={(e) => setIncludeEdgeTrim(e.target.checked)} {...helpProps("includeEdgeTrim")} />
+            <input type="checkbox" checked={includeEdgeTrim} onChange={(e) => setIncludeEdgeTrim(e.target.checked)} />
             <span>Edge/J-trim</span>
           </label>
           <label className="checkboxRow" {...helpProps("includeTopTrim")}>
-            <input type="checkbox {...helpProps("includeTopTrim")}" checked={includeTopTrim} onChange={(e) => setIncludeTopTrim(e.target.checked)} {...helpProps("includeTopTrim")} />
+            <input type="checkbox" checked={includeTopTrim} onChange={(e) => setIncludeTopTrim(e.target.checked)} />
             <span>Top trim</span>
           </label>
           <label className="checkboxRow" {...helpProps("includeBottomTrim")}>
-            <input type="checkbox {...helpProps("includeBottomTrim")}" checked={includeBottomTrim} onChange={(e) => setIncludeBottomTrim(e.target.checked)} {...helpProps("includeBottomTrim")} />
+            <input type="checkbox" checked={includeBottomTrim} onChange={(e) => setIncludeBottomTrim(e.target.checked)} />
             <span>Bottom trim</span>
           </label>
 
@@ -1301,11 +1293,11 @@ export default function App() {
 
           <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Pricing</h3>
           <label className="checkboxRow" {...helpProps("includePanelPrice")}>
-            <input type="checkbox {...helpProps("includePanelPrice")}" checked={includePanelPrice} onChange={(e) => setIncludePanelPrice(e.target.checked)} {...helpProps("includePanelPrice")} />
+            <input type="checkbox" checked={includePanelPrice} onChange={(e) => setIncludePanelPrice(e.target.checked)} />
             <span>Include panel price in total</span>
           </label>
 
-          <button onClick={printEstimate} className="btn" {...helpProps("print")}>
+          <button onClick={printEstimate} className="btn">
             Print / Save as PDF
           </button>
         </div>
@@ -1425,4 +1417,5 @@ export default function App() {
     </div>
   );
 }
+
 
