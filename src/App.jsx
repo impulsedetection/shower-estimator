@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
 
 /* =========================
    CONFIG / RULES
@@ -86,6 +87,160 @@ function money(n) {
   const val = Number.isFinite(n) ? n : 0;
   return val.toLocaleString(undefined, { style: "currency", currency: "USD" });
 }
+
+/* =========================
+   CONTEXT HELP (F2)
+========================= */
+
+const HELP_CONTENT = {
+  // Customer / Proposal
+  customer_name: {
+    title: "Customer Name",
+    body: "Who the estimate is for. This prints on the estimate header.",
+  },
+  customer_phone: {
+    title: "Customer Phone",
+    body: "Optional. Shown on the printout if provided.",
+  },
+  customer_email: {
+    title: "Customer Email",
+    body: "Optional. Shown on the printout if provided.",
+  },
+  job_address: {
+    title: "Job Address",
+    body: "Optional. Use the install location address. Prints on the estimate.",
+  },
+  notes: {
+    title: "Scope / Notes",
+    body: "Short scope, exclusions, and assumptions. This prints under the customer/job summary.",
+  },
+
+  // View
+  detailLevel: {
+    title: "Detail Level",
+    body: "Summary hides internal takeoff lines but the TOTAL still includes everything. Detailed shows every component line.",
+  },
+
+  // Dimensions
+  wall1: {
+    title: "Wall 1 (in)",
+    body: "Left return wall width in inches (from corner to front edge).",
+  },
+  wall2: {
+    title: "Back Wall (in)",
+    body: "Back wall width in inches.",
+  },
+  wall3: {
+    title: "Wall 3 (in)",
+    body: "Right return wall width in inches (from corner to front edge).",
+  },
+  height: {
+    title: "Height (in)",
+    body: "Finished panel height in inches. Typical tub surround is 60–72, full height is 84–96.",
+  },
+
+  // System
+  material: {
+    title: "Material",
+    body: "Select the panel material. This affects waste %, adhesive coverage, and silicone usage assumptions.",
+  },
+  panelSize: {
+    title: "Panel Size",
+    body: "Select the panel dimensions you plan to use. This changes how many panels are needed.",
+  },
+  trimLen: {
+    title: "Trim Stick Length",
+    body: "Choose 8 ft or 10 ft trim sticks. Used when calculating how many sticks are required.",
+  },
+
+  // Backer
+  backerType: {
+    title: "Backer Type",
+    body: "Substrate behind the panels. Sheet-based options will calculate board sheets, screws, and tape.",
+  },
+  sheetSize: {
+    title: "Backer Sheet Size",
+    body: "Board size used to calculate required sheet count (only when a sheet-based backer is selected).",
+  },
+  includeBacker: {
+    title: "Include backer sheets",
+    body: "Adds sheets for the selected backer type to the takeoff/total.",
+  },
+  includeBackerScrews: {
+    title: "Include backer screws",
+    body: "Adds an estimated number of screw boxes for installing the backer.",
+  },
+  includeBackerTape: {
+    title: "Include mesh tape",
+    body: "Adds alkali-resistant mesh tape rolls for seams/corners on sheet-based backers.",
+  },
+
+  // Waterproofing
+  includeWaterproofing: {
+    title: "Include waterproofing",
+    body: "Adds waterproofing materials when a sheet-based backer is selected and a waterproofing system is chosen.",
+  },
+  wpSystem: {
+    title: "Waterproofing System",
+    body: "Choose Liquid or Sheet membrane. ‘None’ means waterproofing is not included.",
+  },
+  liqCoats: {
+    title: "Liquid coats",
+    body: "How many coats of liquid membrane to estimate. Common is 2 coats.",
+  },
+  liqCoveragePerGallon: {
+    title: "Liquid coverage",
+    body: "Coverage per gallon per coat (sq ft/gal/coat). Used to estimate gallons required.",
+  },
+  includeBanding: {
+    title: "Include banding",
+    body: "Adds seam banding for sheet membrane systems.",
+  },
+  bandingWaste: {
+    title: "Banding waste",
+    body: "Extra allowance for overlaps, cuts, and mistakes (example 0.10 = 10%).",
+  },
+
+  // Install options
+  includeAdhesive: {
+    title: "Include adhesive",
+    body: "Adds panel adhesive tubes based on total square feet and the selected material rule.",
+  },
+  includeSilicone: {
+    title: "Include silicone",
+    body: "Adds silicone tubes based on perimeter (and seams if you’re not using H-trim).",
+  },
+  seamsUseTrim: {
+    title: "Seams use H-joint trim",
+    body: "If checked, vertical seams use H-trim (no silicone on seams). If unchecked, seams are sealed with silicone.",
+  },
+  includeInsideCornerTrim: {
+    title: "Inside corner trim",
+    body: "Adds inside corner trim sticks for the two shower corners.",
+  },
+  includeEdgeTrim: {
+    title: "Edge/J-trim",
+    body: "Adds edge/J-trim sticks for the two front edges.",
+  },
+  includeTopTrim: {
+    title: "Top trim",
+    body: "Adds horizontal top trim sticks along the combined wall width.",
+  },
+  includeBottomTrim: {
+    title: "Bottom trim",
+    body: "Adds horizontal bottom trim sticks along the combined wall width.",
+  },
+
+  // Pricing
+  includePanelPrice: {
+    title: "Include panel price in total",
+    body: "If unchecked, panels show as Qty-only and do not affect the total. If checked, panels are priced and included.",
+  },
+  print: {
+    title: "Print / Save as PDF",
+    body: "Opens a printable estimate page in a new tab so you can print or save as PDF.",
+  },
+};
 
 // Perimeter sealing: two vertical corners + bottom + top
 function calcPerimeterLf(w1, w2, w3, h) {
@@ -399,6 +554,58 @@ export default function App() {
     "Remove existing surround as needed, prep substrate, install new system per manufacturer instructions, seal all joints and penetrations."
   );
 
+  // Context help (F2)
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [activeHelpKey, setActiveHelpKey] = useState("wall1");
+  const firstMeasureRef = useRef(null);
+
+  useEffect(() => {
+    // Always reset help focus on first load (so it doesn't "resume" from a prior hot-reload state)
+    setActiveHelpKey("wall1");
+    // Optionally focus the first measurement so keyboard users start in the right place
+    // (Small timeout avoids race with initial render/layout.)
+    setTimeout(() => firstMeasureRef.current?.focus?.(), 0);
+
+    const onKeyDown = (e) => {
+      if (e.key === "F2") {
+        e.preventDefault();
+        setHelpOpen((v) => !v);
+      }
+    };
+
+    // Robust help detection:
+    // Instead of relying on "positional" focus order, we listen globally for focus/click/hover
+    // and read the nearest data-helpkey. This correctly handles <select>, <label><input/></label>, etc.
+    const onAnyInteraction = (e) => {
+      const t = e.target;
+      const el = t?.closest?.("[data-helpkey]");
+      if (!el) return;
+      const key = el.getAttribute("data-helpkey");
+      if (key) setActiveHelpKey(key);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    document.addEventListener("focusin", onAnyInteraction, true);
+    document.addEventListener("pointerdown", onAnyInteraction, true);
+    document.addEventListener("mouseover", onAnyInteraction, true);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("focusin", onAnyInteraction, true);
+      document.removeEventListener("pointerdown", onAnyInteraction, true);
+      document.removeEventListener("mouseover", onAnyInteraction, true);
+    };
+  }, []);
+
+  const helpProps = (key) => ({
+    "data-helpkey": key,
+    // Keep local handlers too (nice for React synthetic events and mobile)
+    onFocus: () => setActiveHelpKey(key),
+    onClick: () => setActiveHelpKey(key),
+    onPointerDown: () => setActiveHelpKey(key),
+    onMouseEnter: () => setActiveHelpKey(key),
+  });
+
   // Lookups
   const rule = MATERIAL_RULES[material];
   const panel = PANEL_SIZES.find((p) => p.key === panelKey) || PANEL_SIZES[0];
@@ -704,8 +911,17 @@ export default function App() {
 
   const smallLabel = { fontWeight: 800, fontSize: 12, color: "var(--muted)" };
 
+  const activeHelp = HELP_CONTENT[activeHelpKey] || null;
+
   return (
-    <div style={{ padding: 24, fontFamily: "Segoe UI, Arial" }}>
+    <div
+      style={{
+        padding: 24,
+        fontFamily: "Segoe UI, Arial",
+        paddingRight: helpOpen ? 380 : 24,
+        transition: "padding-right 160ms ease",
+      }}
+    >
       <style>{globalCss}</style>
 
       {/* Header with logo + title */}
@@ -762,25 +978,25 @@ export default function App() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
               <div style={smallLabel}>Customer Name</div>
-              <input value={customer.name} onChange={(e) => setCustomer((c) => ({ ...c, name: e.target.value }))} style={{ width: "100%" }} />
+              <input value={customer.name} onChange={(e) => setCustomer((c) => ({ ...c, name: e.target.value }))} style={{ width: "100%" }} {...helpProps("customer_name")} />
             </div>
             <div>
               <div style={smallLabel}>Customer Phone</div>
-              <input value={customer.phone} onChange={(e) => setCustomer((c) => ({ ...c, phone: e.target.value }))} style={{ width: "100%" }} />
+              <input value={customer.phone} onChange={(e) => setCustomer((c) => ({ ...c, phone: e.target.value }))} style={{ width: "100%" }} {...helpProps("customer_phone")} />
             </div>
             <div>
               <div style={smallLabel}>Customer Email</div>
-              <input value={customer.email} onChange={(e) => setCustomer((c) => ({ ...c, email: e.target.value }))} style={{ width: "100%" }} />
+              <input value={customer.email} onChange={(e) => setCustomer((c) => ({ ...c, email: e.target.value }))} style={{ width: "100%" }} {...helpProps("customer_email")} />
             </div>
             <div>
               <div style={smallLabel}>Job Address</div>
-              <input value={customer.address} onChange={(e) => setCustomer((c) => ({ ...c, address: e.target.value }))} style={{ width: "100%" }} />
+              <input value={customer.address} onChange={(e) => setCustomer((c) => ({ ...c, address: e.target.value }))} style={{ width: "100%" }} {...helpProps("job_address")} />
             </div>
           </div>
 
           <div style={{ marginTop: 10 }}>
             <div style={smallLabel}>Scope / Notes</div>
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} style={{ width: "100%" }} />
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} style={{ width: "100%" }} {...helpProps("notes")} />
           </div>
 
           <hr />
@@ -788,7 +1004,12 @@ export default function App() {
           <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Estimate View</h3>
           <div style={{ marginBottom: 10 }}>
             <div style={smallLabel}>Detail Level (display only)</div>
-            <select value={detailLevel} onChange={(e) => setDetailLevel(e.target.value)} style={{ width: "100%" }}>
+            <select
+              value={detailLevel}
+              onChange={(e) => setDetailLevel(e.target.value)}
+              style={{ width: "100%" }}
+              {...helpProps("detailLevel")}
+            >
               <option value="summary">Summary (customer-facing)</option>
               <option value="detailed">Detailed (contractor takeoff)</option>
             </select>
@@ -799,23 +1020,51 @@ export default function App() {
 
           <hr />
 
-          <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Dimensions</h3>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+            <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Dimensions</h3>
+            <div style={{ fontSize: 12, fontWeight: 900, color: "var(--red)" }}>FOR HELP HIT F2</div>
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
               <div style={smallLabel}>Wall 1 (in)</div>
-              <input type="number" value={wall1} onChange={(e) => setWall1(Number(e.target.value))} style={{ width: "100%" }} />
+              <input
+                type="number"
+                ref={firstMeasureRef}
+                value={wall1}
+                onChange={(e) => setWall1(Number(e.target.value))}
+                style={{ width: "100%" }}
+                {...helpProps("wall1")}
+              />
             </div>
             <div>
               <div style={smallLabel}>Back wall (in)</div>
-              <input type="number" value={wall2} onChange={(e) => setWall2(Number(e.target.value))} style={{ width: "100%" }} />
+              <input
+                type="number"
+                value={wall2}
+                onChange={(e) => setWall2(Number(e.target.value))}
+                style={{ width: "100%" }}
+                {...helpProps("wall2")}
+              />
             </div>
             <div>
               <div style={smallLabel}>Wall 3 (in)</div>
-              <input type="number" value={wall3} onChange={(e) => setWall3(Number(e.target.value))} style={{ width: "100%" }} />
+              <input
+                type="number"
+                value={wall3}
+                onChange={(e) => setWall3(Number(e.target.value))}
+                style={{ width: "100%" }}
+                {...helpProps("wall3")}
+              />
             </div>
             <div>
               <div style={smallLabel}>Height (in)</div>
-              <input type="number" value={height} onChange={(e) => setHeight(Number(e.target.value))} style={{ width: "100%" }} />
+              <input
+                type="number"
+                value={height}
+                onChange={(e) => setHeight(Number(e.target.value))}
+                style={{ width: "100%" }}
+                {...helpProps("height")}
+              />
             </div>
           </div>
 
@@ -825,7 +1074,12 @@ export default function App() {
 
           <div style={{ marginBottom: 10 }}>
             <div style={smallLabel}>Material</div>
-            <select value={material} onChange={(e) => setMaterial(e.target.value)} style={{ width: "100%" }}>
+            <select
+              value={material}
+              onChange={(e) => setMaterial(e.target.value)}
+              style={{ width: "100%" }}
+              {...helpProps("material")}
+            >
               <option value="pvc">PVC Panels</option>
               <option value="acrylic">Acrylic Panels</option>
               <option value="solid">Solid Surface</option>
@@ -837,7 +1091,12 @@ export default function App() {
 
           <div style={{ marginBottom: 10 }}>
             <div style={smallLabel}>Panel Size</div>
-            <select value={panelKey} onChange={(e) => setPanelKey(e.target.value)} style={{ width: "100%" }}>
+            <select
+              value={panelKey}
+              onChange={(e) => setPanelKey(e.target.value)}
+              style={{ width: "100%" }}
+              {...helpProps("panelSize")}
+            >
               {PANEL_SIZES.map((p) => (
                 <option key={p.key} value={p.key}>
                   {p.label}
@@ -848,7 +1107,12 @@ export default function App() {
 
           <div style={{ marginBottom: 10 }}>
             <div style={smallLabel}>Trim Stick Length</div>
-            <select value={trimLenKey} onChange={(e) => setTrimLenKey(e.target.value)} style={{ width: "100%" }}>
+            <select
+              value={trimLenKey}
+              onChange={(e) => setTrimLenKey(e.target.value)}
+              style={{ width: "100%" }}
+              {...helpProps("trimLen")}
+            >
               {TRIM_LENGTHS.map((t) => (
                 <option key={t.key} value={t.key}>
                   {t.label}
@@ -862,7 +1126,7 @@ export default function App() {
           <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Backer / Substrate</h3>
           <div style={{ marginBottom: 10 }}>
             <div style={smallLabel}>Backer Type</div>
-            <select value={backerType} onChange={(e) => setBackerType(e.target.value)} style={{ width: "100%" }}>
+            <select value={backerType} onChange={(e) => setBackerType(e.target.value)} style={{ width: "100%" }} {...helpProps("backerType")}>
               {BACKER_TYPES.map((b) => (
                 <option key={b.key} value={b.key}>
                   {b.label}
@@ -873,7 +1137,7 @@ export default function App() {
 
           <div style={{ marginBottom: 10 }}>
             <div style={smallLabel}>Sheet Size</div>
-            <select value={sheetKey} onChange={(e) => setSheetKey(e.target.value)} style={{ width: "100%" }} disabled={!backer.requiresSheets}>
+            <select value={sheetKey} onChange={(e) => setSheetKey(e.target.value)} style={{ width: "100%" }} disabled={!backer.requiresSheets} {...helpProps("sheetSize")}>
               {SHEET_SIZES.map((s) => (
                 <option key={s.key} value={s.key}>
                   {s.label}
@@ -882,30 +1146,30 @@ export default function App() {
             </select>
           </div>
 
-          <label className="checkboxRow">
-            <input type="checkbox" checked={includeBacker} onChange={(e) => setIncludeBacker(e.target.checked)} />
+          <label className="checkboxRow" {...helpProps("includeBacker")}>
+            <input type="checkbox" checked={includeBacker} onChange={(e) => setIncludeBacker(e.target.checked)} {...helpProps("includeBacker")} />
             <span>Include backer sheets</span>
           </label>
-          <label className="checkboxRow">
-            <input type="checkbox" checked={includeBackerScrews} onChange={(e) => setIncludeBackerScrews(e.target.checked)} />
+          <label className="checkboxRow" {...helpProps("includeBackerScrews")}>
+            <input type="checkbox" checked={includeBackerScrews} onChange={(e) => setIncludeBackerScrews(e.target.checked)} {...helpProps("includeBackerScrews")} />
             <span>Include backer screws</span>
           </label>
-          <label className="checkboxRow">
-            <input type="checkbox" checked={includeBackerTape} onChange={(e) => setIncludeBackerTape(e.target.checked)} />
+          <label className="checkboxRow" {...helpProps("includeBackerTape")}>
+            <input type="checkbox" checked={includeBackerTape} onChange={(e) => setIncludeBackerTape(e.target.checked)} {...helpProps("includeBackerTape")} />
             <span>Include mesh tape</span>
           </label>
 
           <hr />
 
           <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Waterproofing</h3>
-          <label className="checkboxRow">
-            <input type="checkbox" checked={includeWaterproofing} onChange={(e) => setIncludeWaterproofing(e.target.checked)} />
+          <label className="checkboxRow" {...helpProps("includeWaterproofing")}>
+            <input type="checkbox" checked={includeWaterproofing} onChange={(e) => setIncludeWaterproofing(e.target.checked)} {...helpProps("includeWaterproofing")} />
             <span>Include waterproofing</span>
           </label>
 
           <div style={{ marginBottom: 10 }}>
             <div style={smallLabel}>System</div>
-            <select value={wpSystem} onChange={(e) => setWpSystem(e.target.value)} style={{ width: "100%" }} disabled={!includeWaterproofing}>
+            <select value={wpSystem} onChange={(e) => setWpSystem(e.target.value)} style={{ width: "100%" }} disabled={!includeWaterproofing} {...helpProps("wpSystem")}>
               {WATERPROOF_SYSTEMS.map((w) => (
                 <option key={w.key} value={w.key}>
                   {w.label}
@@ -923,11 +1187,11 @@ export default function App() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
                   <div style={smallLabel}>Coats</div>
-                  <input type="number" min="1" value={liqCoats} onChange={(e) => setLiqCoats(Number(e.target.value))} style={{ width: "100%" }} />
+                  <input type="number" min="1" value={liqCoats} onChange={(e) => setLiqCoats(Number(e.target.value))} style={{ width: "100%" }} {...helpProps("liqCoats")} />
                 </div>
                 <div>
                   <div style={smallLabel}>Coverage (sf/gal/coat)</div>
-                  <input type="number" min="1" value={liqCoveragePerGallon} onChange={(e) => setLiqCoveragePerGallon(Number(e.target.value))} style={{ width: "100%" }} />
+                  <input type="number" min="1" value={liqCoveragePerGallon} onChange={(e) => setLiqCoveragePerGallon(Number(e.target.value))} style={{ width: "100%" }} {...helpProps("liqCoveragePerGallon")} />
                 </div>
               </div>
               <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6, fontWeight: 700 }}>
@@ -939,13 +1203,13 @@ export default function App() {
           {includeWaterproofing && wpSystem === "sheet" && (
             <div style={{ border: "1px solid var(--border)", borderRadius: 14, padding: 10, marginBottom: 10, background: "#fff" }}>
               <div style={{ fontWeight: 950, marginBottom: 6, color: "var(--navy)" }}>Sheet Settings</div>
-              <label className="checkboxRow">
-                <input type="checkbox" checked={includeBanding} onChange={(e) => setIncludeBanding(e.target.checked)} />
+              <label className="checkboxRow" {...helpProps("includeBanding")}>
+                <input type="checkbox" checked={includeBanding} onChange={(e) => setIncludeBanding(e.target.checked)} {...helpProps("includeBanding")} />
                 <span>Include banding</span>
               </label>
               <div>
                 <div style={smallLabel}>Banding Waste (fraction)</div>
-                <input type="number" step="0.01" min="0" value={bandingWaste} onChange={(e) => setBandingWaste(Number(e.target.value))} style={{ width: "100%" }} />
+                <input type="number" step="0.01" min="0" value={bandingWaste} onChange={(e) => setBandingWaste(Number(e.target.value))} style={{ width: "100%" }} {...helpProps("bandingWaste")} />
               </div>
               <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6, fontWeight: 700 }}>
                 Est: membrane {model.sheetMembraneSqft} sf, banding {model.bandLf} lf, corners {model.preformedCorners}
@@ -956,45 +1220,45 @@ export default function App() {
           <hr />
 
           <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Install Options</h3>
-          <label className="checkboxRow">
-            <input type="checkbox" checked={includeAdhesive} onChange={(e) => setIncludeAdhesive(e.target.checked)} />
+          <label className="checkboxRow" {...helpProps("includeAdhesive")}>
+            <input type="checkbox" checked={includeAdhesive} onChange={(e) => setIncludeAdhesive(e.target.checked)} {...helpProps("includeAdhesive")} />
             <span>Include adhesive</span>
           </label>
-          <label className="checkboxRow">
-            <input type="checkbox" checked={includeSilicone} onChange={(e) => setIncludeSilicone(e.target.checked)} />
+          <label className="checkboxRow" {...helpProps("includeSilicone")}>
+            <input type="checkbox" checked={includeSilicone} onChange={(e) => setIncludeSilicone(e.target.checked)} {...helpProps("includeSilicone")} />
             <span>Include silicone</span>
           </label>
-          <label className="checkboxRow">
-            <input type="checkbox" checked={seamsUseTrim} onChange={(e) => setSeamsUseTrim(e.target.checked)} />
+          <label className="checkboxRow" {...helpProps("seamsUseTrim")}>
+            <input type="checkbox" checked={seamsUseTrim} onChange={(e) => setSeamsUseTrim(e.target.checked)} {...helpProps("seamsUseTrim")} />
             <span>Seams use H-joint trim (not sealant)</span>
           </label>
 
-          <label className="checkboxRow">
-            <input type="checkbox" checked={includeInsideCornerTrim} onChange={(e) => setIncludeInsideCornerTrim(e.target.checked)} />
+          <label className="checkboxRow" {...helpProps("includeInsideCornerTrim")}>
+            <input type="checkbox" checked={includeInsideCornerTrim} onChange={(e) => setIncludeInsideCornerTrim(e.target.checked)} {...helpProps("includeInsideCornerTrim")} />
             <span>Inside corner trim</span>
           </label>
-          <label className="checkboxRow">
-            <input type="checkbox" checked={includeEdgeTrim} onChange={(e) => setIncludeEdgeTrim(e.target.checked)} />
+          <label className="checkboxRow" {...helpProps("includeEdgeTrim")}>
+            <input type="checkbox" checked={includeEdgeTrim} onChange={(e) => setIncludeEdgeTrim(e.target.checked)} {...helpProps("includeEdgeTrim")} />
             <span>Edge/J-trim</span>
           </label>
-          <label className="checkboxRow">
-            <input type="checkbox" checked={includeTopTrim} onChange={(e) => setIncludeTopTrim(e.target.checked)} />
+          <label className="checkboxRow" {...helpProps("includeTopTrim")}>
+            <input type="checkbox" checked={includeTopTrim} onChange={(e) => setIncludeTopTrim(e.target.checked)} {...helpProps("includeTopTrim")} />
             <span>Top trim</span>
           </label>
-          <label className="checkboxRow">
-            <input type="checkbox" checked={includeBottomTrim} onChange={(e) => setIncludeBottomTrim(e.target.checked)} />
+          <label className="checkboxRow" {...helpProps("includeBottomTrim")}>
+            <input type="checkbox" checked={includeBottomTrim} onChange={(e) => setIncludeBottomTrim(e.target.checked)} {...helpProps("includeBottomTrim")} />
             <span>Bottom trim</span>
           </label>
 
           <hr />
 
           <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Pricing</h3>
-          <label className="checkboxRow">
-            <input type="checkbox" checked={includePanelPrice} onChange={(e) => setIncludePanelPrice(e.target.checked)} />
+          <label className="checkboxRow" {...helpProps("includePanelPrice")}>
+            <input type="checkbox" checked={includePanelPrice} onChange={(e) => setIncludePanelPrice(e.target.checked)} {...helpProps("includePanelPrice")} />
             <span>Include panel price in total</span>
           </label>
 
-          <button onClick={printEstimate} className="btn">
+          <button onClick={printEstimate} className="btn" {...helpProps("print")}>
             Print / Save as PDF
           </button>
         </div>
@@ -1086,6 +1350,68 @@ export default function App() {
           )}
         </div>
       </div>
+
+      {/* Context help panel (toggle with F2). Space is reserved via paddingRight so it never covers form data. */}
+      {helpOpen && (
+        <div
+          role="dialog"
+          aria-label="Field help"
+          style={{
+            position: "fixed",
+            top: 24,
+            right: 24,
+            width: 340,
+            maxHeight: "calc(100vh - 48px)",
+            overflow: "auto",
+            border: "1px solid var(--border)",
+            borderRadius: 16,
+            background: "white",
+            boxShadow: "0 12px 30px rgba(0,0,0,0.12)",
+            padding: 14,
+            zIndex: 50,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+            <div style={{ fontWeight: 950, color: "var(--navy)" }}>Help (F2)</div>
+            <button
+              onClick={() => setHelpOpen(false)}
+              style={{
+                border: "1px solid var(--border)",
+                background: "white",
+                borderRadius: 12,
+                padding: "6px 10px",
+                cursor: "pointer",
+                fontWeight: 900,
+                color: "var(--navy)",
+              }}
+            >
+              Close
+            </button>
+          </div>
+
+          <div style={{ marginTop: 10, borderTop: "1px solid var(--border)", paddingTop: 10 }}>
+            {activeHelp ? (
+              <>
+                <div style={{ fontWeight: 950, color: "var(--red)", marginBottom: 6 }}>{activeHelp.title}</div>
+                <div style={{ fontSize: 13, lineHeight: 1.4, color: "#111" }}>{activeHelp.body}</div>
+                {activeHelp.tip ? (
+                  <div style={{ marginTop: 10, fontSize: 12, color: "var(--muted)", fontWeight: 800 }}>
+                    Tip: {activeHelp.tip}
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <div style={{ fontSize: 13, color: "var(--muted)", fontWeight: 800 }}>
+                Click into any field, then press F2.
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginTop: 12, fontSize: 11, color: "var(--muted)", fontWeight: 800 }}>
+            Focus a field (Tab/Click) to change this help. Press F2 again to toggle.
+          </div>
+        </div>
+      )}
     </div>
   );
 }
