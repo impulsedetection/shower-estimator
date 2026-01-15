@@ -973,7 +973,30 @@ export default function App() {
       <div style={{ display: "grid", gridTemplateColumns: "540px 1fr", gap: 16 }}>
         {/* LEFT: Inputs */}
         <div style={uiCard}>
+          
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              marginBottom: 12,
+              fontWeight: 900,
+              color: "#0b5ed7",
+              cursor: "pointer",
+              userSelect: "none",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={helpOpen}
+              onChange={(e) => setHelpOpen(e.target.checked)}
+              style={{ width: 16, height: 16 }}
+            />
+            <span>Help System On</span>
+          </label>
+
           <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Customer / Proposal</h3>
+
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
