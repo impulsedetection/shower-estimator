@@ -556,6 +556,9 @@ export default function App() {
 
   // Context help (F2)
   const [helpOpen, setHelpOpen] = useState(false);
+  const helpOpenRef = useRef(false);
+  const activeHelpKeyRef = useRef(null);
+
   const [activeHelpKey, setActiveHelpKey] = useState(null);
   const [helpAnchor, setHelpAnchor] = useState(null);
   const firstMeasureRef = useRef(null);
@@ -578,7 +581,7 @@ export default function App() {
     // - Show help bubble when hovering with mouse OR touching a control
     // - Hide help bubble immediately when user clicks/taps/focuses to edit
     const showHelpForTarget = (target) => {
-      if (!helpOpen) return;
+      if (!helpOpenRef.current) return;
       const el = target?.closest?.("[data-helpkey]");
       if (!el) return;
       const key = el.getAttribute("data-helpkey");
@@ -589,27 +592,31 @@ export default function App() {
     };
 
     const hideHelp = () => {
-      if (!helpOpen) return;
+      if (!helpOpenRef.current) return;
       setActiveHelpKey(null);
       setHelpAnchor(null);
     };
 
-    const onMouseOver = (e) => showHelpForTarget(e.target);
+    const onPointerOver = (e) => {
+      // Only treat mouse/pen hover as hover
+      if (e.pointerType && e.pointerType !== "mouse" && e.pointerType !== "pen") return;
+      showHelpForTarget(e.target);
+    };
     const onTouchStart = (e) => {
       // Touch users don't have hover; touchstart is a "peek" at help
       showHelpForTarget(e.target);
     };
 
     window.addEventListener("keydown", onKeyDown);
-    document.addEventListener("mouseover", onMouseOver, true);
+    document.addEventListener("pointerover", onPointerOver, true);
     document.addEventListener("touchstart", onTouchStart, { capture: true, passive: true });
     document.addEventListener("pointerdown", hideHelp, true);
     document.addEventListener("focusin", hideHelp, true);
 
     // Keep position accurate while scrolling/resizing
     const onScrollOrResize = () => {
-      if (!helpOpen || !activeHelpKey) return;
-      const el = document.querySelector(`[data-helpkey="${activeHelpKey}"]`);
+      if (!helpOpenRef.current || !activeHelpKeyRef.current) return;
+      const el = document.querySelector(`[data-helpkey="${activeHelpKeyRef.current}"]`);
       if (!el) return;
       const r = el.getBoundingClientRect();
       setHelpAnchor({ top: r.top, left: r.left, width: r.width, height: r.height });
@@ -619,7 +626,7 @@ export default function App() {
 
     return () => {
       window.removeEventListener("keydown", onKeyDown);
-      document.removeEventListener("mouseover", onMouseOver, true);
+      document.removeEventListener("pointerover", onPointerOver, true);
       document.removeEventListener("touchstart", onTouchStart, true);
       document.removeEventListener("pointerdown", hideHelp, true);
       document.removeEventListener("focusin", hideHelp, true);
@@ -629,6 +636,15 @@ export default function App() {
   }, []);
 
   const helpProps = (key) => ({ "data-helpkey": key });
+
+  useEffect(() => {
+    helpOpenRef.current = helpOpen;
+  }, [helpOpen]);
+
+  useEffect(() => {
+    activeHelpKeyRef.current = activeHelpKey;
+  }, [activeHelpKey]);
+
 
   // Lookups
   const rule = MATERIAL_RULES[material];
@@ -1025,25 +1041,25 @@ export default function App() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
               <div style={smallLabel}>Customer Name</div>
-              <input value={customer.name} onChange={(e) => setCustomer((c) => ({ ...c, name: e.target.value }))} style={{ width: "100%" }} />
+              <input {...helpProps("customer_name")} value={customer.name} onChange={(e) => setCustomer((c) => ({ ...c, name: e.target.value }))} style={{ width: "100%" }} />
             </div>
             <div>
               <div style={smallLabel}>Customer Phone</div>
-              <input value={customer.phone} onChange={(e) => setCustomer((c) => ({ ...c, phone: e.target.value }))} style={{ width: "100%" }} />
+              <input {...helpProps("customer_phone")} value={customer.phone} onChange={(e) => setCustomer((c) => ({ ...c, phone: e.target.value }))} style={{ width: "100%" }} />
             </div>
             <div>
               <div style={smallLabel}>Customer Email</div>
-              <input value={customer.email} onChange={(e) => setCustomer((c) => ({ ...c, email: e.target.value }))} style={{ width: "100%" }} />
+              <input {...helpProps("customer_email")} value={customer.email} onChange={(e) => setCustomer((c) => ({ ...c, email: e.target.value }))} style={{ width: "100%" }} />
             </div>
             <div>
               <div style={smallLabel}>Job Address</div>
-              <input value={customer.address} onChange={(e) => setCustomer((c) => ({ ...c, address: e.target.value }))} style={{ width: "100%" }} />
+              <input {...helpProps("job_address")} value={customer.address} onChange={(e) => setCustomer((c) => ({ ...c, address: e.target.value }))} style={{ width: "100%" }} />
             </div>
           </div>
 
           <div style={{ marginTop: 10 }}>
             <div style={smallLabel}>Scope / Notes</div>
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} style={{ width: "100%" }} />
+            <textarea {...helpProps("notes")} value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} style={{ width: "100%" }} />
           </div>
 
           <hr />
@@ -1165,7 +1181,7 @@ export default function App() {
           <h3 style={{ marginTop: 0, color: "var(--navy)" }}>Backer / Substrate</h3>
           <div style={{ marginBottom: 10 }}>
             <div style={smallLabel}>Backer Type</div>
-            <select value={backerType} onChange={(e) => setBackerType(e.target.value)} style={{ width: "100%" }}>
+            <select {...helpProps("backerType")} value={backerType} onChange={(e) => setBackerType(e.target.value)} style={{ width: "100%" }}>
               {BACKER_TYPES.map((b) => (
                 <option key={b.key} value={b.key}>
                   {b.label}
@@ -1176,7 +1192,7 @@ export default function App() {
 
           <div style={{ marginBottom: 10 }}>
             <div style={smallLabel}>Sheet Size</div>
-            <select value={sheetKey} onChange={(e) => setSheetKey(e.target.value)} style={{ width: "100%" }} disabled={!backer.requiresSheets}>
+            <select {...helpProps("sheetSize")} value={sheetKey} onChange={(e) => setSheetKey(e.target.value)} style={{ width: "100%" }} disabled={!backer.requiresSheets}>
               {SHEET_SIZES.map((s) => (
                 <option key={s.key} value={s.key}>
                   {s.label}
@@ -1208,7 +1224,7 @@ export default function App() {
 
           <div style={{ marginBottom: 10 }}>
             <div style={smallLabel}>System</div>
-            <select value={wpSystem} onChange={(e) => setWpSystem(e.target.value)} style={{ width: "100%" }} disabled={!includeWaterproofing}>
+            <select {...helpProps("wpSystem")} value={wpSystem} onChange={(e) => setWpSystem(e.target.value)} style={{ width: "100%" }} disabled={!includeWaterproofing}>
               {WATERPROOF_SYSTEMS.map((w) => (
                 <option key={w.key} value={w.key}>
                   {w.label}
@@ -1226,11 +1242,11 @@ export default function App() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <div>
                   <div style={smallLabel}>Coats</div>
-                  <input type="number" min="1" value={liqCoats} onChange={(e) => setLiqCoats(Number(e.target.value))} style={{ width: "100%" }} />
+                  <input {...helpProps("liqCoats")} type="number" min="1" value={liqCoats} onChange={(e) => setLiqCoats(Number(e.target.value))} style={{ width: "100%" }} />
                 </div>
                 <div>
                   <div style={smallLabel}>Coverage (sf/gal/coat)</div>
-                  <input type="number" min="1" value={liqCoveragePerGallon} onChange={(e) => setLiqCoveragePerGallon(Number(e.target.value))} style={{ width: "100%" }} />
+                  <input {...helpProps("liqCoveragePerGallon")} type="number" min="1" value={liqCoveragePerGallon} onChange={(e) => setLiqCoveragePerGallon(Number(e.target.value))} style={{ width: "100%" }} />
                 </div>
               </div>
               <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6, fontWeight: 700 }}>
@@ -1248,7 +1264,7 @@ export default function App() {
               </label>
               <div>
                 <div style={smallLabel}>Banding Waste (fraction)</div>
-                <input type="number" step="0.01" min="0" value={bandingWaste} onChange={(e) => setBandingWaste(Number(e.target.value))} style={{ width: "100%" }} />
+                <input {...helpProps("bandingWaste")} type="number" step="0.01" min="0" value={bandingWaste} onChange={(e) => setBandingWaste(Number(e.target.value))} style={{ width: "100%" }} />
               </div>
               <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6, fontWeight: 700 }}>
                 Est: membrane {model.sheetMembraneSqft} sf, banding {model.bandLf} lf, corners {model.preformedCorners}
@@ -1297,7 +1313,7 @@ export default function App() {
             <span>Include panel price in total</span>
           </label>
 
-          <button onClick={printEstimate} className="btn">
+          <button {...helpProps("print")} onClick={printEstimate} className="btn">
             Print / Save as PDF
           </button>
         </div>
@@ -1417,5 +1433,3 @@ export default function App() {
     </div>
   );
 }
-
-
